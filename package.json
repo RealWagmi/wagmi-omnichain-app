@@ -1,0 +1,69 @@
+{
+  "name": "wagmi-omnichain-app",
+  "scripts": {
+    "compile": "hardhat clean && hardhat compile",
+    "test": "npx hardhat test --show-stack-traces --typecheck",
+    "deploy": "npx hardhat run ./scripts/deploy.ts --network $npm_config_network",
+    "connect": "npx hardhat run ./scripts/connect.ts --network $npm_config_network",
+    "swap": "npx hardhat run ./scripts/swap.ts --network $npm_config_network",
+    "config:get": "npx hardhat lz:oapp:config:get --oapp-config sonic.layerzero.config.ts",
+    "peers:get": "npx hardhat lz:oapp:peers:get --oapp-config sonic.layerzero.config.ts",
+    "peers:set": "npx hardhat lz:oapp:wire --oapp-config layerzero.config.ts",
+    "lint-fix": "prettier --write --plugin=prettier-plugin-solidity 'contracts/**/*.sol' && prettier --write 'scripts/**/*.ts' && prettier --write 'test/**/*.ts'"
+  },
+  "resolutions": {
+    "ethers": "^5.7.2",
+    "hardhat-deploy": "^0.12.1"
+  },
+  "devDependencies": {
+    "@layerzerolabs/lz-definitions": "^3.0.59",
+    "@layerzerolabs/lz-evm-messagelib-v2": "^3.0.12",
+    "@layerzerolabs/lz-evm-protocol-v2": "^3.0.12",
+    "@layerzerolabs/lz-evm-v1-0.7": "^3.0.12",
+    "@layerzerolabs/lz-v2-utilities": "^3.0.12",
+    "@layerzerolabs/oapp-evm": "^0.3.1",
+    "@layerzerolabs/scan-client": "^0.0.8",
+    "@layerzerolabs/solidity-examples": "1.1.0",
+    "@layerzerolabs/toolbox-hardhat": "~0.6.7",
+    "@nomicfoundation/hardhat-chai-matchers": "^1.0.0",
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.12",
+    "@nomicfoundation/hardhat-verify": "^2.0.13",
+    "@nomiclabs/hardhat-ethers": "^2.2.3",
+    "@openzeppelin/contracts": "^5.0.2",
+    "@typechain/ethers-v5": "^10.0.0",
+    "@typechain/ethers-v6": "^0.5.0",
+    "@typechain/hardhat": "^9.0.0",
+    "@types/chai": "^4.3.11",
+    "@types/mocha": "^10.0.6",
+    "@types/node": "^20.11.30",
+    "@uniswap/router-sdk": "^2.0.3",
+    "@uniswap/sdk-core": "^7.7.2",
+    "@uniswap/v3-sdk": "^3.25.2",
+    "chai": "^4.4.1",
+    "dotenv": "^16.4.5",
+    "ethers": "^5.7.2",
+    "hardhat": "^2.22.10",
+    "hardhat-contract-sizer": "^2.10.0",
+    "hardhat-deploy": "^0.12.1",
+    "hardhat-storage-layout": "^0.1.7",
+    "mocha": "^10.2.0",
+    "prettier-plugin-solidity": "^1.3.1",
+    "solidity-bytes-utils": "^0.8.2",
+    "ts-node": "^10.9.2",
+    "typechain": "^8.3.0",
+    "typescript": "^5.4.2"
+  },
+  "engines": {
+    "node": ">=18.16.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "ethers": "^5.7.2",
+      "hardhat-deploy": "^0.12.1"
+    }
+  },
+  "overrides": {
+    "ethers": "^5.7.2",
+    "hardhat-deploy": "^0.12.1"
+  }
+}
