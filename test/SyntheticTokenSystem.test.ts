@@ -1,7 +1,7 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
 import { BigNumber, BigNumberish, Contract, ContractFactory } from "ethers";
-import { deployments, ethers } from "hardhat";
+import { deployments, ethers, artifacts } from "hardhat";
 import {
   time,
   mine,
@@ -135,7 +135,12 @@ describe("Synthetic Token System", function () {
     swapQuoterV3 = await SwapQuoterV3Factory.deploy(UniswapV3Factory, POOL_INIT_CODE_HASH);
 
     // Get contract factories
-    SyntheticTokenHubFactory = await ethers.getContractFactory("SyntheticTokenHub");
+    const SyntheticTokenHubHelpersArtifact = await artifacts.readArtifact("SyntheticTokenHubHelpers");
+    const SyntheticTokenHubHelpersFactory = new ethers.ContractFactory([], SyntheticTokenHubHelpersArtifact.bytecode, deployer);
+    const syntheticTokenHubHelpers = await SyntheticTokenHubHelpersFactory.deploy();
+    SyntheticTokenHubFactory = await ethers.getContractFactory("SyntheticTokenHub", {
+      libraries: { SyntheticTokenHubHelpers: await syntheticTokenHubHelpers.address },
+    });
     SyntheticTokenHubGettersFactory = await ethers.getContractFactory("SyntheticTokenHubGetters");
     GatewayVaultFactory = await ethers.getContractFactory("GatewayVault");
 

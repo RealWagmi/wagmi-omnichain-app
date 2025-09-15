@@ -1,7 +1,7 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
 import { Contract, ContractFactory } from "ethers";
-import { deployments, ethers } from "hardhat";
+import { deployments, ethers, artifacts } from "hardhat";
 import { Options } from "@layerzerolabs/lz-v2-utilities";
 
 import {
@@ -80,7 +80,13 @@ describe("SyntheticTokenHubGetters", function () {
     const signers = await ethers.getSigners();
     [deployer, user1, endpointOwner] = signers;
 
-    SyntheticTokenHubFactory = await ethers.getContractFactory("SyntheticTokenHub");
+    const SyntheticTokenHubHelpersArtifact = await artifacts.readArtifact("SyntheticTokenHubHelpers");
+    const SyntheticTokenHubHelpersFactory = new ethers.ContractFactory([], SyntheticTokenHubHelpersArtifact.bytecode, deployer);
+    const syntheticTokenHubHelpers = await SyntheticTokenHubHelpersFactory.deploy();
+    SyntheticTokenHubFactory = await ethers.getContractFactory("SyntheticTokenHub", {
+      libraries: { SyntheticTokenHubHelpers: await syntheticTokenHubHelpers.address },
+    });
+    SyntheticTokenHubGettersFactory = await ethers.getContractFactory("SyntheticTokenHubGetters");
     SyntheticTokenHubGettersFactory = await ethers.getContractFactory("SyntheticTokenHubGetters");
     MockERC20Factory = await ethers.getContractFactory("MockERC20");
     GatewayVaultFactory = await ethers.getContractFactory("GatewayVault");

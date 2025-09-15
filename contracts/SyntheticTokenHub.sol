@@ -13,6 +13,8 @@ import { OptionsBuilder } from "@layerzerolabs/oapp-evm/contracts/oapp/libs/Opti
 import { IBalancer } from "./interfaces/IBalancer.sol";
 import { MessageType, Asset, SwapParams, AvailableToken } from "./interfaces/ICommonStructs.sol";
 
+import { SyntheticTokenHubHelpers } from "./libraries/SyntheticTokenHubHelpers.sol";
+
 // import { console } from "hardhat/console.sol";
 
 /**
@@ -23,6 +25,7 @@ import { MessageType, Asset, SwapParams, AvailableToken } from "./interfaces/ICo
 contract SyntheticTokenHub is OApp, OAppOptionsType3 {
     using TransferHelper for address;
     using OptionsBuilder for bytes;
+    using SyntheticTokenHubHelpers for *;
 
     /**
      * @dev Represents an asset entry with token index and amount.
@@ -216,8 +219,7 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
         // Create token (hub will automatically be the owner)
         ++_syntheticTokenCount;
         uint256 tokenIndex = _syntheticTokenCount;
-        SyntheticToken syntheticToken = new SyntheticToken(
-            tokenName,
+        SyntheticToken syntheticToken = tokenName.createToken(
             _symbol,
             _decimals,
             tokenIndex
