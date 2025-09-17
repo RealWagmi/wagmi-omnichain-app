@@ -51,7 +51,7 @@ const toBytes32 = function(address: string): string {
   return "0x000000000000000000000000" + address.slice(2);
 }
 
-describe.only("Synthetic Token System", function () {
+describe("Synthetic Token System", function () {
   enum MessageType {
     Deposit,
     Withdraw,
@@ -720,6 +720,7 @@ describe.only("Synthetic Token System", function () {
       const swapParams: GatewaySwapParamsStruct = {
         from: toBytes32(user1.address),
         to: toBytes32(user1.address), // Send the result to the same user on Chain C
+        evmAddress: user1.address, // fallback address to receive dust and gas leftovers
         syntheticTokenOut: syntheticBtcToken.address,
         gasLimit: gasLimitToHub,
         dstEid: eidC,
@@ -789,6 +790,7 @@ describe.only("Synthetic Token System", function () {
       const swapParams: GatewaySwapParamsStruct = {
         from: toBytes32(user1.address),
         to: toBytes32(user1.address),
+        evmAddress: user1.address, // fallback address to receive dust and gas leftovers
         syntheticTokenOut: syntheticBtcToken.address,
         gasLimit: gasLimitToHub,
         dstEid: eidC,
@@ -892,6 +894,7 @@ describe.only("Synthetic Token System", function () {
       const swapParams: GatewaySwapParamsStruct = {
         from: toBytes32(user2.address),
         to: toBytes32(user2.address),
+        evmAddress: user1.address, // fallback address to receive dust and gas leftovers
         syntheticTokenOut: syntheticBtcToken.address,
         gasLimit: gasLimitToHub,
         dstEid: eidC,

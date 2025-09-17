@@ -563,7 +563,7 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
                 returndata.length > 0 ? string(returndata) : "Uniswap execution failed"
             );
         }
-        _collectDust(syntheticTokensIn, params.syntheticTokenOut, params.from);
+        _collectDust(syntheticTokensIn, params.syntheticTokenOut, params.evmAddress);
         return payload;
     }
 
@@ -623,7 +623,7 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
                     payloadData,
                     options,
                     MessagingFee(msg.value, 0),
-                    payable(params.from)
+                    payable(params.evmAddress)
                 );
             } catch (bytes memory reason) {
                 bytes memory msgData = abi.encode(
@@ -640,7 +640,7 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
                     payload,
                     options,
                     MessagingFee(msg.value, 0),
-                    payable(params.from)
+                    payable(params.evmAddress)
                 );
             }
         } else if (messageType == MessageType.LinkToken) {

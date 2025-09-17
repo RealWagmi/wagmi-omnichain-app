@@ -17,6 +17,7 @@ struct Asset {
 struct SwapParams {
     address from;
     address to;
+    address evmAddress;
     address syntheticTokenOut;
     uint128 gasLimit;
     uint32 dstEid;
@@ -30,6 +31,7 @@ struct SwapParams {
 struct GatewaySwapParams {
     bytes32 from;
     bytes32 to;
+    address evmAddress;
     address syntheticTokenOut;
     uint128 gasLimit;
     uint32 dstEid;
