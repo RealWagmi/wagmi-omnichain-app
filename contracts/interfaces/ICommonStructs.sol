@@ -27,6 +27,19 @@ struct SwapParams {
     uint256 minimumAmountOut;
 }
 
+struct CommonSwapParams {
+    bytes32 from;
+    bytes32 to;
+    address syntheticTokenOut;
+    uint128 gasLimit;
+    uint32 dstEid;
+    uint256 value;
+    Asset[] assets;
+    bytes commands;
+    bytes[] inputs;
+    uint256 minimumAmountOut;
+}
+
 struct AvailableToken {
     bool onPause;
     address tokenAddress;

@@ -44,10 +44,14 @@ import {
 import { TradeType } from "@uniswap/sdk-core";
 import { MixedRouteTrade, MixedRouteSDK, Trade as RouterTrade } from "@uniswap/router-sdk";
 import { CommandType, RoutePlanner } from "./testHelper/planner";
-import { SwapParamsStruct, AssetStruct } from "../typechain-types/contracts/GatewayVault";
+import { CommonSwapParamsStruct, AssetStruct } from "../typechain-types/contracts/GatewayVault";
 import { encodePath, getMultiHopQuote, priceToTick, addV3ExactInTrades } from "./testHelper/helpers";
 
-describe("Synthetic Token System", function () {
+const toBytes32 = function(address: string): string {
+  return "0x000000000000000000000000" + address.slice(2);
+}
+
+describe.only("Synthetic Token System", function () {
   enum MessageType {
     Deposit,
     Withdraw,
@@ -713,9 +717,9 @@ describe("Synthetic Token System", function () {
       ]);
       const { commands, inputs } = planner;
 
-      const swapParams: SwapParamsStruct = {
-        from: user1.address,
-        to: user1.address, // Send the result to the same user on Chain C
+      const swapParams: CommonSwapParamsStruct = {
+        from: toBytes32(user1.address),
+        to: toBytes32(user1.address), // Send the result to the same user on Chain C
         syntheticTokenOut: syntheticBtcToken.address,
         gasLimit: gasLimitToHub,
         dstEid: eidC,
@@ -744,7 +748,6 @@ describe("Synthetic Token System", function () {
       // Verify the outcome - user1 should receive BTC on Chain C
       const finalUserBtcBalance = await cWBTC.balanceOf(user1.address);
       const btcReceived = finalUserBtcBalance.sub(initialUserBtcBalance);
-
       console.log(`BTC received on Chain C: ${ethers.utils.formatUnits(btcReceived, 8)}`);
 
       // Assert that the received amount meets our expectations
@@ -783,9 +786,9 @@ describe("Synthetic Token System", function () {
         .toString();
 
       // 2. Create SwapParams with invalid data
-      const swapParams: SwapParamsStruct = {
-        from: user1.address,
-        to: user1.address,
+      const swapParams: CommonSwapParamsStruct = {
+        from: toBytes32(user1.address),
+        to: toBytes32(user1.address),
         syntheticTokenOut: syntheticBtcToken.address,
         gasLimit: gasLimitToHub,
         dstEid: eidC,
@@ -886,9 +889,9 @@ describe("Synthetic Token System", function () {
         .toHex()
         .toString();
 
-      const swapParams: SwapParamsStruct = {
-        from: user2.address,
-        to: user2.address,
+      const swapParams: CommonSwapParamsStruct = {
+        from: toBytes32(user2.address),
+        to: toBytes32(user2.address),
         syntheticTokenOut: syntheticBtcToken.address,
         gasLimit: gasLimitToHub,
         dstEid: eidC,
