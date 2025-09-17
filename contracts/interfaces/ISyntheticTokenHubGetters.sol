@@ -11,7 +11,7 @@ interface ISyntheticTokenHubGetters {
     }
 
     struct RemoteTokenInfo {
-        address remoteAddress;
+        bytes32 remoteAddress;
         int8 decimalsDelta;
         uint256 totalBalance;
         uint256 minBridgeAmt; // Minimum amount for bridging this token (in synthetic token decimals)
@@ -39,13 +39,13 @@ interface ISyntheticTokenHubGetters {
 
     function getSyntheticAddressByRemoteAddress(
         uint32 _eid,
-        address _remoteAddress
+        bytes32 _remoteAddress
     ) external view returns (address);
 
     function getRemoteAddressBySyntheticAddress(
         uint32 _eid,
         address _syntheticAddress
-    ) external view returns (address);
+    ) external view returns (bytes32);
 
     function getGatewayVaultByEid(uint32 _eid) external view returns (address);
 

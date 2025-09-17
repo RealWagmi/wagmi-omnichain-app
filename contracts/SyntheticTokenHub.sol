@@ -3,6 +3,7 @@
 pragma solidity 0.8.23;
 
 import { TransferHelper } from "./libraries/TransferHelper.sol";
+import { TypeCasting } from "./libraries/TypeCasting.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { OApp, MessagingFee, Origin } from "@layerzerolabs/oapp-evm/contracts/oapp/OApp.sol";
 import { MessagingReceipt } from "@layerzerolabs/oapp-evm/contracts/oapp/OAppSender.sol";
@@ -11,7 +12,7 @@ import { ISyntheticToken } from "./interfaces/ISyntheticToken.sol";
 import { SyntheticToken } from "./SyntheticToken.sol";
 import { OptionsBuilder } from "@layerzerolabs/oapp-evm/contracts/oapp/libs/OptionsBuilder.sol";
 import { IBalancer } from "./interfaces/IBalancer.sol";
-import { MessageType, Asset, SwapParams, AvailableToken } from "./interfaces/ICommonStructs.sol";
+import { MessageType, Asset, CommonAsset, SwapParams, CommonAvailableToken } from "./interfaces/ICommonStructs.sol";
 
 import { SyntheticTokenHubHelpers } from "./libraries/SyntheticTokenHubHelpers.sol";
 
@@ -26,6 +27,7 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
     using TransferHelper for address;
     using OptionsBuilder for bytes;
     using SyntheticTokenHubHelpers for *;
+    using TypeCasting for *;
 
     /**
      * @dev Represents an asset entry with token index and amount.
@@ -49,10 +51,21 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
      * @dev Stores information about a remote token linked to a synthetic token.
      */
     struct RemoteTokenInfo {
-        address remoteAddress; // Address of the token on the remote chain
+        bytes32 remoteAddress; // Address of the token on the remote chain
         int8 decimalsDelta; // Difference in decimals between the synthetic token and the remote token
         uint256 totalBalance; // Total balance of this token on the remote chain, from the perspective of this hub
         uint256 minBridgeAmt; // Minimum amount for bridging this token (in synthetic token decimals)
+    }
+
+    struct RemoteTokenView {
+        uint32 eid;
+        RemoteTokenInfo remoteTokenInfo;
+    }
+
+    struct SyntheticTokenView {
+        uint256 tokenIndex;
+        SyntheticTokenInfo syntheticTokenInfo;
+        RemoteTokenView[] remoteTokens;
     }
 
     address public immutable uniswapUniversalRouter; // Address of the Uniswap Universal Router
@@ -72,10 +85,10 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
 
     // Mapping for token lookup by network and remote address
     // @dev Mapping from endpoint ID (eid) and remote token address to the corresponding local synthetic token address.
-    mapping(uint32 => mapping(address => address)) private _syntheticAddressByRemoteAddress; // eid => remote address => token address
+    mapping(uint32 => mapping(bytes32 => address)) private _syntheticAddressByRemoteAddress; // eid => remote address => token address
     // Mapping for token lookup by network and synthetic address
     // @dev Mapping from endpoint ID (eid) and local synthetic token address to the corresponding remote token address.
-    mapping(uint32 => mapping(address => address)) private _remoteAddressBySyntheticAddress; // eid => token address => remote address
+    mapping(uint32 => mapping(address => bytes32)) private _remoteAddressBySyntheticAddress; // eid => token address => remote address
     // @dev Mapping from endpoint ID (eid) to the GatewayVault contract address on that chain.
     mapping(uint32 => address) private _gatewayVaultByEid; // eid => gateway vault address
     // @dev Mapping from synthetic token address and endpoint ID (eid) to the bonus balance accumulated.
@@ -106,7 +119,7 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
      * @param gatewayVault The address of the GatewayVault contract on the remote chain.
      * @param eid The endpoint ID of the remote chain.
      */
-    event RemoteTokenLinked(AvailableToken[] availableTokens, address gatewayVault, uint32 eid);
+    event RemoteTokenLinked(CommonAvailableToken[] availableTokens, address gatewayVault, uint32 eid);
     /**
      * @dev Emitted when synthetic tokens are minted.
      * @param tokenIndex The index of the synthetic token minted.
@@ -151,7 +164,7 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
      * @param assets Array of assets received.
      * @param srcEid The source endpoint ID from which the message originated.
      */
-    event MessageReceived(bytes32 guid, address from, address to, Asset[] assets, uint32 srcEid);
+    event MessageReceived(bytes32 guid, bytes32 from, bytes32 to, CommonAsset[] assets, uint32 srcEid);
     /**
      * @dev Emitted when the balancer address is set.
      * @param balancerAddress The address of the balancer contract.
@@ -176,7 +189,7 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
     error RemoteTokenAlreadyLinked(
         address syntheticToken,
         uint32 eid,
-        address attemptedRemoteToken
+        bytes32 attemptedRemoteToken
     );
     error InvalidLzReceiveSender(address actualSender, address expectedSender);
     error InvalidMessageType();
@@ -266,7 +279,7 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
         bytes calldata _options
     ) external payable returns (MessagingReceipt memory receipt) {
         // Validate and prepare assets (view operation)
-        (Asset[] memory assetsRemote, uint256[] memory penalties) = validateAndPrepareAssets(
+        (CommonAsset[] memory assetsRemote, uint256[] memory penalties) = validateAndPrepareAssets(
             _assets,
             _dstEid,
             false // Enforce minBridgeAmt check for regular bridge
@@ -316,7 +329,7 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
     )
         public
         view
-        returns (uint256 nativeFee, Asset[] memory assetsRemote, uint256[] memory penalties)
+        returns (uint256 nativeFee, CommonAsset[] memory assetsRemote, uint256[] memory penalties)
     {
         (assetsRemote, penalties) = validateAndPrepareAssets(_assets, _dstEid, false); // Enforce minBridgeAmt check for quote
 
@@ -375,13 +388,13 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
      * @return bonuses Array of bonus amounts for each asset.
      */
     function calculateBonuses(
-        Asset[] memory _assets,
+        CommonAsset[] memory _assets,
         uint32 _srcEid
     ) external view returns (uint256[] memory bonuses) {
         uint256 length = _assets.length;
         bonuses = new uint256[](length);
         for (uint256 i = 0; i < length; i++) {
-            Asset memory asset = _assets[i];
+            CommonAsset memory asset = _assets[i];
             address syntheticTokenAddress = _syntheticAddressByRemoteAddress[_srcEid][
                 asset.tokenAddress
             ];
@@ -418,9 +431,9 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
         Asset[] memory _assets,
         uint32 _dstEid,
         bool _skipMinBridgeAmtCheck
-    ) public view returns (Asset[] memory assets, uint256[] memory penalties) {
+    ) public view returns (CommonAsset[] memory assets, uint256[] memory penalties) {
         uint256 inputLength = _assets.length;
-        assets = new Asset[](inputLength);
+        assets = new CommonAsset[](inputLength);
         penalties = new uint256[](inputLength);
 
         for (uint256 i = 0; i < inputLength; i++) {
@@ -429,7 +442,7 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
             uint256 amount = _asset.tokenAmount;
 
             RemoteTokenInfo memory remoteToken = _remoteTokens[syntheticTokenAddress][_dstEid];
-            if (remoteToken.remoteAddress == address(0)) {
+            if (remoteToken.remoteAddress == bytes32(0)) {
                 revert TokenNotLinkedToDestChain(syntheticTokenAddress, _dstEid);
             }
 
@@ -476,7 +489,7 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
             // For the message payload, use the normalized amount
             uint256 normalizedAmount = _normalizeAmount(amount, -remoteToken.decimalsDelta);
 
-            assets[i] = Asset({
+            assets[i] = CommonAsset({
                 tokenAddress: remoteToken.remoteAddress,
                 tokenAmount: normalizedAmount
             });
@@ -502,7 +515,7 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
 
         uint256 length = params.assets.length;
         for (uint256 i = 0; i < length; i++) {
-            Asset memory asset = params.assets[i];
+            CommonAsset memory asset = params.assets[i];
             address syntheticTokenAddress = _syntheticAddressByRemoteAddress[_srcEid][
                 asset.tokenAddress
             ];
@@ -544,7 +557,7 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
                 tokenAmount: ISyntheticToken(params.syntheticTokenOut).balanceOf(address(this))
             });
             // If validateAndPrepareAssets fails, it will revert.
-            (Asset[] memory assetsToSend, uint256[] memory penalties) = validateAndPrepareAssets(
+            (CommonAsset[] memory assetsToSend, uint256[] memory penalties) = validateAndPrepareAssets(
                 assetsToBurn,
                 params.dstEid,
                 true // Skip minBridgeAmt check for the tokenOut of a swap
@@ -667,21 +680,21 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
         address _sender,
         uint32 _srcEid
     ) internal {
-        AvailableToken[] memory _availableTokens = abi.decode(_payload, (AvailableToken[]));
+        CommonAvailableToken[] memory _availableTokens = abi.decode(_payload, (CommonAvailableToken[]));
         if (_gatewayVaultByEid[_srcEid] != _sender) {
             _gatewayVaultByEid[_srcEid] = _sender;
         }
 
         for (uint256 i = 0; i < _availableTokens.length; i++) {
             address syntheticTokenAddress = _availableTokens[i].syntheticTokenAddress;
-            address remoteTokenAddress = _availableTokens[i].tokenAddress;
+            bytes32 remoteTokenAddress = _availableTokens[i].tokenAddress;
             uint256 _tokenIndex = _tokenIndexByAddress[syntheticTokenAddress];
             if (_tokenIndex == 0) {
                 revert SyntheticTokenNotFound();
             }
 
             RemoteTokenInfo storage remoteToken = _remoteTokens[syntheticTokenAddress][_srcEid];
-            if (remoteToken.remoteAddress != address(0)) {
+            if (remoteToken.remoteAddress != bytes32(0)) {
                 revert RemoteTokenAlreadyLinked(
                     syntheticTokenAddress,
                     _srcEid,
@@ -743,13 +756,13 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
      * @param _srcEid The source network identifier from which the deposit originated.
      */
     function _processDepositMessage(bytes memory _payload, bytes32 _guid, uint32 _srcEid) internal {
-        (address _from, address _to, Asset[] memory _assets) = abi.decode(
+        (bytes32 _from, address _to, CommonAsset[] memory _assets) = abi.decode(
             _payload,
-            (address, address, Asset[])
+            (bytes32, address, CommonAsset[])
         );
 
         for (uint256 i = 0; i < _assets.length; i++) {
-            Asset memory asset = _assets[i];
+            CommonAsset memory asset = _assets[i];
             address syntheticTokenAddress = _syntheticAddressByRemoteAddress[_srcEid][
                 asset.tokenAddress
             ];
@@ -782,10 +795,10 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
 
             // Update asset for event
             _assets[i].tokenAmount = normalizedAmount;
-            _assets[i].tokenAddress = syntheticTokenAddress;
+            _assets[i].tokenAddress = syntheticTokenAddress.toBytes32();
         }
 
-        emit MessageReceived(_guid, _from, _to, _assets, _srcEid);
+        emit MessageReceived(_guid, _from, _to.toBytes32(), _assets, _srcEid);
     }
 
     /**
@@ -904,5 +917,110 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
             mstore(0x00, sload(slot))
             return(0x00, 0x20)
         }
+    }
+
+    function getSyntheticTokenCount() external view returns (uint256) {
+        return _syntheticTokenCount;
+    }
+
+    function getRemoteTokenInfo(
+        address tokenAddress,
+        uint32 eid
+    ) public view returns (RemoteTokenInfo memory) {
+        return _remoteTokens[tokenAddress][eid];
+    }
+
+    function getTokenIndexByAddress(address _tokenAddress) external view returns (uint256) {
+        return _tokenIndexByAddress[_tokenAddress];
+    }
+
+    function getRemoteAddressBySyntheticAddress(
+        uint32 _eid,
+        address _syntheticAddress
+    ) external view returns (bytes32) {
+        return _remoteAddressBySyntheticAddress[_eid][_syntheticAddress];
+    }
+
+    function getSyntheticAddressByRemoteAddress(
+        uint32 _eid,
+        bytes32 _remoteAddress
+    ) external view returns (address) {
+        return _syntheticAddressByRemoteAddress[_eid][_remoteAddress];
+    }
+
+    // ЗДЕСЬ НУЖЕН BYTES32
+    function getGatewayVaultByEid(uint32 _eid) external view returns (address) {
+        return _gatewayVaultByEid[_eid];
+    }
+
+    function getBonusBalance(address _tokenAddress, uint32 _eid) external view returns (uint256) {
+        return _bonusBalance[_tokenAddress][_eid];
+    }
+
+    function getSyntheticTokenInfo(
+        uint256 _tokenIndex
+    ) public view returns (SyntheticTokenView memory) {
+        require(_tokenIndex > 0, "Invalid token index"); // Ensure token index is valid (1-based).
+
+        SyntheticTokenInfo memory tokenInfo = _syntheticTokens[_tokenIndex];
+        require(tokenInfo.tokenAddress != address(0), "Token not found");
+
+        uint256 batchSize = 5;
+        RemoteTokenView[] memory remoteTokens = new RemoteTokenView[](tokenInfo.chainList.length);
+        for (uint256 i = 0; i < tokenInfo.chainList.length; i += batchSize) {
+            uint256 currentBatchSize = i + batchSize > tokenInfo.chainList.length
+                ? tokenInfo.chainList.length - i
+                : batchSize;
+            for (uint256 j = 0; j < currentBatchSize; j++) {
+                uint32 eid = tokenInfo.chainList[i + j];
+                // Fetch remote token details for the current synthetic token on chain `eid`.
+                RemoteTokenInfo memory remoteInfo = getRemoteTokenInfo(tokenInfo.tokenAddress, eid);
+                remoteTokens[i + j] = RemoteTokenView({ eid: eid, remoteTokenInfo: remoteInfo });
+            }
+        }
+        // Construct and return the complete SyntheticTokenView.
+        return
+            SyntheticTokenView({
+                tokenIndex: _tokenIndex,
+                syntheticTokenInfo: tokenInfo,
+                remoteTokens: remoteTokens
+            });
+    }
+
+    function getSyntheticTokensInfo(
+        uint256[] memory _tokenIndices
+    ) external view returns (SyntheticTokenView[] memory) {
+        uint256 syntheticTokenCount = _syntheticTokenCount;
+
+        uint256 length = _tokenIndices.length > 0 ? _tokenIndices.length : syntheticTokenCount;
+        SyntheticTokenView[] memory tokens = new SyntheticTokenView[](length);
+
+        uint256 batchSize = 10; // Defines how many tokens are processed notionally in one outer loop iteration.
+        for (uint256 i = 0; i < length; i += batchSize) {
+            uint256 currentBatchSize = i + batchSize > length ? length - i : batchSize;
+            for (uint256 j = 0; j < currentBatchSize; j++) {
+                // Determine the token index: either from the input array or by iterating from 1 to count.
+                uint256 tokenIndex = _tokenIndices.length > 0 ? _tokenIndices[i + j] : i + j + 1; // Token indices are 1-based.
+                tokens[i + j] = getSyntheticTokenInfo(tokenIndex);
+            }
+        }
+        return tokens;
+    }
+
+    function getSyntheticTokenIndex(address _tokenAddress) external view returns (uint256) {
+        uint256 index = _tokenIndexByAddress[_tokenAddress];
+        require(index > 0, "Token not found"); // Ensure the token exists.
+        return index;
+    }
+
+    function isTokenRegistered(address _tokenAddress) external view returns (bool) {
+        return _tokenIndexByAddress[_tokenAddress] > 0;
+    }
+
+    function getMinBridgeAmount(
+        address _syntheticTokenAddress,
+        uint32 _eid
+    ) external view returns (uint256) {
+        return _remoteTokens[_syntheticTokenAddress][_eid].minBridgeAmt;
     }
 }

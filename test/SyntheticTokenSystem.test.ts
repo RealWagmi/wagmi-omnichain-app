@@ -16,8 +16,6 @@ import {
   GatewayVault,
   SyntheticTokenHub,
   SyntheticTokenHub__factory,
-  SyntheticTokenHubGetters,
-  SyntheticTokenHubGetters__factory,
   PoolCreator,
   SwapQuoterV3,
   GatewayVault__factory,
@@ -48,7 +46,7 @@ import { GatewaySwapParamsStruct, AssetStruct } from "../typechain-types/contrac
 import { encodePath, getMultiHopQuote, priceToTick, addV3ExactInTrades } from "./testHelper/helpers";
 
 const toBytes32 = function(address: string): string {
-  return "0x000000000000000000000000" + address.slice(2);
+  return ("0x000000000000000000000000" + address.slice(2)).toLowerCase();
 }
 
 describe("Synthetic Token System", function () {
@@ -73,7 +71,6 @@ describe("Synthetic Token System", function () {
 
   // Contract factories
   let SyntheticTokenHubFactory: SyntheticTokenHub__factory;
-  let SyntheticTokenHubGettersFactory: SyntheticTokenHubGetters__factory;
   let GatewayVaultFactory: GatewayVault__factory;
   let MockERC20Factory: MockERC20__factory;
   let EndpointV2MockFactory: ContractFactory;
@@ -98,7 +95,6 @@ describe("Synthetic Token System", function () {
   let endpointOwner: SignerWithAddress;
   // Contracts
   let syntheticTokenHub: SyntheticTokenHub;
-  let syntheticTokenHubGetters: SyntheticTokenHubGetters;
   let gatewayVaultB: GatewayVault;
   let gatewayVaultC: GatewayVault; // Additional gateway for multi-chain testing
   let balancer: Balancer;
@@ -145,7 +141,6 @@ describe("Synthetic Token System", function () {
     SyntheticTokenHubFactory = await ethers.getContractFactory("SyntheticTokenHub", {
       libraries: { SyntheticTokenHubHelpers: await syntheticTokenHubHelpers.address },
     });
-    SyntheticTokenHubGettersFactory = await ethers.getContractFactory("SyntheticTokenHubGetters");
     GatewayVaultFactory = await ethers.getContractFactory("GatewayVault");
 
     // Get EndpointV2Mock artifact
@@ -193,9 +188,6 @@ describe("Synthetic Token System", function () {
     // Set GatewayVault trusted peers
     await gatewayVaultB.setPeer(eidA, synthTokenHubAddressBytes32);
     await gatewayVaultC.setPeer(eidA, synthTokenHubAddressBytes32);
-
-    // Deploy SyntheticTokenHubGetters
-    syntheticTokenHubGetters = await SyntheticTokenHubGettersFactory.deploy(syntheticTokenHub.address);
   });
 
   describe("Token Creation and Management", function () {
@@ -244,8 +236,8 @@ describe("Synthetic Token System", function () {
         expect(await syntheticToken.name()).to.equal(`Synthetic ${tokenSymbol}`);
         expect(await syntheticToken.owner()).to.equal(syntheticTokenHub.address);
         expect(await syntheticToken.totalSupply()).to.equal(0);
-        expect(await syntheticTokenHubGetters.getSyntheticTokenCount()).to.equal(index);
-        expect(await syntheticTokenHubGetters.getSyntheticTokenIndex(syntheticToken.address)).to.equal(index);
+        expect(await syntheticTokenHub.getSyntheticTokenCount()).to.equal(index);
+        expect(await syntheticTokenHub.getSyntheticTokenIndex(syntheticToken.address)).to.equal(index);
       }
       // Create token instance
       syntheticUsdtToken = await ethers.getContractAt("SyntheticToken", SyntheticTokenAddress[0]);
@@ -319,33 +311,33 @@ describe("Synthetic Token System", function () {
 
       // Check token information via remoteTokens mapping
       // usdt
-      const remoteTokenInfo = await syntheticTokenHubGetters.getRemoteTokenInfo(syntheticUsdtToken.address, eidB);
-      expect(remoteTokenInfo.remoteAddress).to.equal(bUSDT.address);
+      const remoteTokenInfo = await syntheticTokenHub.getRemoteTokenInfo(syntheticUsdtToken.address, eidB);
+      expect(remoteTokenInfo.remoteAddress).to.equal(toBytes32(bUSDT.address));
       expect(remoteTokenInfo.decimalsDelta).to.equal(0); // Same number of decimal places
 
       // wbtc
-      const remoteTokenInfoBtc = await syntheticTokenHubGetters.getRemoteTokenInfo(syntheticBtcToken.address, eidB);
-      expect(remoteTokenInfoBtc.remoteAddress).to.equal(bWBTC.address);
+      const remoteTokenInfoBtc = await syntheticTokenHub.getRemoteTokenInfo(syntheticBtcToken.address, eidB);
+      expect(remoteTokenInfoBtc.remoteAddress).to.equal(toBytes32(bWBTC.address));
       expect(remoteTokenInfoBtc.decimalsDelta).to.equal(0); // Same number of decimal places
 
       // weth
-      const remoteTokenInfoWeth = await syntheticTokenHubGetters.getRemoteTokenInfo(syntheticWethToken.address, eidB);
-      expect(remoteTokenInfoWeth.remoteAddress).to.equal(bWETH.address);
+      const remoteTokenInfoWeth = await syntheticTokenHub.getRemoteTokenInfo(syntheticWethToken.address, eidB);
+      expect(remoteTokenInfoWeth.remoteAddress).to.equal(toBytes32(bWETH.address));
       expect(remoteTokenInfoWeth.decimalsDelta).to.equal(0); // Same number of decimal places
 
       // Check token was added correctly
       const newTokenCount = await gatewayVaultB.getAvailableTokenLength();
       expect(newTokenCount).to.equal(3);
 
-      const syntheticTokensInfo = await syntheticTokenHubGetters.getSyntheticTokensInfo([]);
+      const syntheticTokensInfo = await syntheticTokenHub.getSyntheticTokensInfo([]);
       // console.dir(syntheticTokensInfo, { depth: null });
       expect(syntheticTokensInfo.length).to.equal(3);
       expect(syntheticTokensInfo[0].syntheticTokenInfo.tokenAddress).to.equal(syntheticUsdtToken.address);
       expect(syntheticTokensInfo[1].syntheticTokenInfo.tokenAddress).to.equal(syntheticWethToken.address);
       expect(syntheticTokensInfo[2].syntheticTokenInfo.tokenAddress).to.equal(syntheticBtcToken.address);
-      expect(syntheticTokensInfo[0].remoteTokens[0].remoteTokenInfo.remoteAddress).to.equal(bUSDT.address);
-      expect(syntheticTokensInfo[1].remoteTokens[0].remoteTokenInfo.remoteAddress).to.equal(bWETH.address);
-      expect(syntheticTokensInfo[2].remoteTokens[0].remoteTokenInfo.remoteAddress).to.equal(bWBTC.address);
+      expect(syntheticTokensInfo[0].remoteTokens[0].remoteTokenInfo.remoteAddress).to.equal(toBytes32(bUSDT.address));
+      expect(syntheticTokensInfo[1].remoteTokens[0].remoteTokenInfo.remoteAddress).to.equal(toBytes32(bWETH.address));
+      expect(syntheticTokensInfo[2].remoteTokens[0].remoteTokenInfo.remoteAddress).to.equal(toBytes32(bWBTC.address));
 
       const tokenSetupConfigC: GatewayVault.TokenSetupConfigStruct[] = [
         {
@@ -379,11 +371,11 @@ describe("Synthetic Token System", function () {
     it("should find synthetic token index by address", async function () {
       // Make sure the test runs after token is created
       // Using the syntheticUsdtToken that was created in the initial setup
-      const index = await syntheticTokenHubGetters.getSyntheticTokenIndex(syntheticUsdtToken.address);
+      const index = await syntheticTokenHub.getSyntheticTokenIndex(syntheticUsdtToken.address);
       expect(index).to.be.equal(1);
 
       await expect(
-        syntheticTokenHubGetters.getSyntheticTokenIndex("0x0000000000000000000000000000000000000001")
+        syntheticTokenHub.getSyntheticTokenIndex("0x0000000000000000000000000000000000000001")
       ).to.be.revertedWith("Token not found");
     });
 
@@ -391,9 +383,9 @@ describe("Synthetic Token System", function () {
       // Find token by its corresponding address on remote chain
       // We need to use the _syntheticAddressByRemoteAddress mapping
 
-      const syntheticAddress = await syntheticTokenHubGetters.getSyntheticAddressByRemoteAddress(
+      const syntheticAddress = await syntheticTokenHub.getSyntheticAddressByRemoteAddress(
         eidB,
-        bUSDT.address // This is mockEthAddress from previous test
+        toBytes32(bUSDT.address) // This is mockEthAddress from previous test
       );
 
       expect(syntheticAddress).to.equal(syntheticUsdtToken.address);
@@ -430,9 +422,9 @@ describe("Synthetic Token System", function () {
 
     it("should have proper gateway mapping", async function () {
       // After linking tokens, the gatewayVaultByEid mapping should be updated
-      const gatewayB = await syntheticTokenHubGetters.getGatewayVaultByEid(eidB);
+      const gatewayB = await syntheticTokenHub.getGatewayVaultByEid(eidB);
       expect(gatewayB).to.equal(gatewayVaultB.address);
-      const gatewayC = await syntheticTokenHubGetters.getGatewayVaultByEid(eidC);
+      const gatewayC = await syntheticTokenHub.getGatewayVaultByEid(eidC);
       expect(gatewayC).to.equal(gatewayVaultC.address);
     });
   });
@@ -598,7 +590,7 @@ describe("Synthetic Token System", function () {
     it("should enforce minBridgeAmt for bridgeTokens in SyntheticTokenHub", async function () {
       // Assuming cWBTC (remote) has minBridgeAmt of 0.0001 WBTC (synthetic equivalent based on delta=0)
       // And remoteToken.minBridgeAmt is stored in synthetic token decimals.
-      const remoteInfoWBTC_C = await syntheticTokenHubGetters.getRemoteTokenInfo(syntheticBtcToken.address, eidC);
+      const remoteInfoWBTC_C = await syntheticTokenHub.getRemoteTokenInfo(syntheticBtcToken.address, eidC);
       const minAmtWBTC_Synthetic = remoteInfoWBTC_C.minBridgeAmt;
       // minAmtWBTC_Synthetic should be utils.parseUnits("0.0001", 8) if linking was done with that and delta is 0.
 
@@ -981,7 +973,7 @@ describe("Synthetic Token System", function () {
 
   describe("System Integration", function () {
     it("should get token information correctly", async function () {
-      const tokenInfo = await syntheticTokenHubGetters.getSyntheticTokenInfo(1);
+      const tokenInfo = await syntheticTokenHub.getSyntheticTokenInfo(1);
 
       expect(tokenInfo.syntheticTokenInfo.tokenAddress).to.equal(syntheticUsdtToken.address);
       expect(tokenInfo.syntheticTokenInfo.tokenSymbol).to.equal("USDT");
@@ -989,10 +981,10 @@ describe("Synthetic Token System", function () {
     });
 
     it("should verify token registration status", async function () {
-      const isRegistered = await syntheticTokenHubGetters.isTokenRegistered(syntheticUsdtToken.address);
+      const isRegistered = await syntheticTokenHub.isTokenRegistered(syntheticUsdtToken.address);
       expect(isRegistered).to.equal(true);
 
-      const isNotRegistered = await syntheticTokenHubGetters.isTokenRegistered(
+      const isNotRegistered = await syntheticTokenHub.isTokenRegistered(
         "0x0000000000000000000000000000000000000001"
       );
       expect(isNotRegistered).to.equal(false);
@@ -1010,7 +1002,7 @@ describe("Synthetic Token System", function () {
         false
       );
       expect(preparedAssets.length).to.equal(1);
-      expect(preparedAssets[0].tokenAddress).to.equal(bUSDT.address);
+      expect(preparedAssets[0].tokenAddress).to.equal(toBytes32(bUSDT.address));
       // Account for potential penalty if any (though for a simple validation with sufficient balance, it might be 0)
       expect(preparedAssets[0].tokenAmount).to.equal(validAmount.sub(penalties[0]));
 
@@ -1022,7 +1014,7 @@ describe("Synthetic Token System", function () {
 
       // Test insufficient balance FOR syntheticUsdtToken (eidB)
       // Its balance on eidB is likely depleted by prior tests.
-      const remoteInfoForUsdtOnEidB = await syntheticTokenHubGetters.getRemoteTokenInfo(
+      const remoteInfoForUsdtOnEidB = await syntheticTokenHub.getRemoteTokenInfo(
         syntheticUsdtToken.address,
         eidB
       );
@@ -1072,7 +1064,7 @@ describe("Synthetic Token System", function () {
 
       await new Promise((resolve) => setTimeout(resolve, 500));
 
-      const remoteTokenInfo_test18_eidB = await syntheticTokenHubGetters.getRemoteTokenInfo(
+      const remoteTokenInfo_test18_eidB = await syntheticTokenHub.getRemoteTokenInfo(
         syntheticTestToken_test18.address,
         eidB
       );
@@ -1110,7 +1102,7 @@ describe("Synthetic Token System", function () {
       const expectedDustRemovedAmount_test18 = ethers.utils.parseUnits("1.123456000000000000", 18);
       const [preparedDustyAssets_test18 /* penalties1_test18 */] =
         await syntheticTokenHub.callStatic.validateAndPrepareAssets(dustyAsset_test18, eidB, false);
-      expect(preparedDustyAssets_test18[0].tokenAddress).to.equal(remoteTestToken_test6.address);
+      expect(preparedDustyAssets_test18[0].tokenAddress).to.equal(toBytes32(remoteTestToken_test6.address));
       const expectedNormalizedAmount_test6 = ethers.utils.parseUnits("1.123456", 6);
       expect(preparedDustyAssets_test18[0].tokenAmount).to.equal(expectedNormalizedAmount_test6);
 
@@ -1162,11 +1154,11 @@ describe("Synthetic Token System", function () {
 
         for (const network of mapping.networks) {
           // Get remote token info from SyntheticTokenHub
-          const remoteInfo = await syntheticTokenHubGetters.getRemoteTokenInfo(syntheticToken.address, network.eid);
+          const remoteInfo = await syntheticTokenHub.getRemoteTokenInfo(syntheticToken.address, network.eid);
 
           // Get actual balance in the gateway vault
           const actualVaultBalance = await network.token.balanceOf(network.vault.address);
-          const bonusBalance = await syntheticTokenHubGetters.getBonusBalance(syntheticToken.address, network.eid);
+          const bonusBalance = await syntheticTokenHub.getBonusBalance(syntheticToken.address, network.eid);
 
           let combinedBalanceInSyntheticDecimals = remoteInfo.totalBalance.add(bonusBalance);
           let expectedVaultBalanceInRemoteDecimals = combinedBalanceInSyntheticDecimals;
@@ -1197,13 +1189,13 @@ describe("Synthetic Token System", function () {
   describe("SyntheticTokenHubGetters Tests", function () {
     // Test getSyntheticTokenCount
     it("should correctly return synthetic token count", async function () {
-      const count = await syntheticTokenHubGetters.getSyntheticTokenCount();
+      const count = await syntheticTokenHub.getSyntheticTokenCount();
       expect(count).to.equal(4); // We now have 4 tokens including the TEST18 token added in the previous test
     });
 
     // Test getRemoteTokenInfo with various scenarios
     it("should correctly get remote token info for existing token", async function () {
-      const remoteInfo = await syntheticTokenHubGetters.getRemoteTokenInfo(syntheticUsdtToken.address, eidB);
+      const remoteInfo = await syntheticTokenHub.getRemoteTokenInfo(syntheticUsdtToken.address, eidB);
 
       const expectedTotalBalance = ethers.BigNumber.from("6601510591");
       // Note: expectedBonusBalance is an estimate. The actual value depends on penalties generated
@@ -1215,11 +1207,11 @@ describe("Synthetic Token System", function () {
       const lowerBound = estimatedBonusBalance.sub(tolerance);
       const upperBound = estimatedBonusBalance.add(tolerance);
 
-      expect(remoteInfo.remoteAddress).to.equal(bUSDT.address);
+      expect(remoteInfo.remoteAddress).to.equal(toBytes32(bUSDT.address));
       expect(remoteInfo.totalBalance.toString()).to.equal(expectedTotalBalance.toString());
       expect(remoteInfo.decimalsDelta).to.equal(0);
 
-      const bonusBalance = await syntheticTokenHubGetters.getBonusBalance(syntheticUsdtToken.address, eidB);
+      const bonusBalance = await syntheticTokenHub.getBonusBalance(syntheticUsdtToken.address, eidB);
       expect(
         bonusBalance.gte(lowerBound),
         `Bonus balance ${bonusBalance.toString()} too low, expected ~${estimatedBonusBalance.toString()}`
@@ -1234,68 +1226,68 @@ describe("Synthetic Token System", function () {
     });
 
     it("should return zero values for non-existent remote token", async function () {
-      const remoteInfo = await syntheticTokenHubGetters.getRemoteTokenInfo(syntheticUsdtToken.address, 999);
-      expect(remoteInfo.remoteAddress).to.equal(ethers.constants.AddressZero);
+      const remoteInfo = await syntheticTokenHub.getRemoteTokenInfo(syntheticUsdtToken.address, 999);
+      expect(remoteInfo.remoteAddress).to.equal(toBytes32(ethers.constants.AddressZero));
       expect(remoteInfo.totalBalance).to.equal(0);
       expect(remoteInfo.decimalsDelta).to.equal(0);
     });
 
     // Test getTokenIndexByAddress
     it("should return correct token index for existing token", async function () {
-      const index = await syntheticTokenHubGetters.getTokenIndexByAddress(syntheticUsdtToken.address);
+      const index = await syntheticTokenHub.getTokenIndexByAddress(syntheticUsdtToken.address);
       expect(index).to.equal(1);
     });
 
     it("should return 0 for non-existent token index", async function () {
-      const index = await syntheticTokenHubGetters.getTokenIndexByAddress(ethers.constants.AddressZero);
+      const index = await syntheticTokenHub.getTokenIndexByAddress(ethers.constants.AddressZero);
       expect(index).to.equal(0);
     });
 
     // Test getSyntheticAddressByRemoteAddress
     it("should return correct synthetic address for remote token", async function () {
-      const syntheticAddress = await syntheticTokenHubGetters.getSyntheticAddressByRemoteAddress(eidB, bUSDT.address);
+      const syntheticAddress = await syntheticTokenHub.getSyntheticAddressByRemoteAddress(eidB, toBytes32(bUSDT.address));
       expect(syntheticAddress).to.equal(syntheticUsdtToken.address);
     });
 
     it("should return zero address for non-existent remote token", async function () {
-      const syntheticAddress = await syntheticTokenHubGetters.getSyntheticAddressByRemoteAddress(
+      const syntheticAddress = await syntheticTokenHub.getSyntheticAddressByRemoteAddress(
         eidB,
-        ethers.constants.AddressZero
+        toBytes32(ethers.constants.AddressZero)
       );
       expect(syntheticAddress).to.equal(ethers.constants.AddressZero);
     });
 
     // Test getRemoteAddressBySyntheticAddress
     it("should return correct remote address for synthetic token", async function () {
-      const remoteAddress = await syntheticTokenHubGetters.getRemoteAddressBySyntheticAddress(
+      const remoteAddress = await syntheticTokenHub.getRemoteAddressBySyntheticAddress(
         eidB,
         syntheticUsdtToken.address
       );
-      expect(remoteAddress).to.equal(bUSDT.address);
+      expect(remoteAddress).to.equal(toBytes32(bUSDT.address));
     });
 
     it("should return zero address for non-existent synthetic token", async function () {
-      const remoteAddress = await syntheticTokenHubGetters.getRemoteAddressBySyntheticAddress(
+      const remoteAddress = await syntheticTokenHub.getRemoteAddressBySyntheticAddress(
         eidB,
         ethers.constants.AddressZero
       );
-      expect(remoteAddress).to.equal(ethers.constants.AddressZero);
+      expect(remoteAddress).to.equal(toBytes32(ethers.constants.AddressZero));
     });
 
     // Test getGatewayVaultByEid
     it("should return correct gateway vault address for existing chain", async function () {
-      const vaultAddress = await syntheticTokenHubGetters.getGatewayVaultByEid(eidB);
+      const vaultAddress = await syntheticTokenHub.getGatewayVaultByEid(eidB);
       expect(vaultAddress).to.equal(gatewayVaultB.address);
     });
 
     it("should return zero address for non-existent chain", async function () {
-      const vaultAddress = await syntheticTokenHubGetters.getGatewayVaultByEid(999);
+      const vaultAddress = await syntheticTokenHub.getGatewayVaultByEid(999);
       expect(vaultAddress).to.equal(ethers.constants.AddressZero);
     });
 
     // Test getSyntheticTokensInfo with different inputs
     it("should return all tokens when no indices provided", async function () {
-      const tokens = await syntheticTokenHubGetters.getSyntheticTokensInfo([]);
+      const tokens = await syntheticTokenHub.getSyntheticTokensInfo([]);
       expect(tokens.length).to.equal(4); // We now have 4 tokens including the TEST18 token added in the previous test
       expect(tokens[0].tokenIndex).to.equal(1);
       expect(tokens[0].syntheticTokenInfo.tokenAddress).to.equal(syntheticUsdtToken.address);
@@ -1305,7 +1297,7 @@ describe("Synthetic Token System", function () {
     });
 
     it("should return specific tokens when indices provided", async function () {
-      const tokens = await syntheticTokenHubGetters.getSyntheticTokensInfo([1, 3]);
+      const tokens = await syntheticTokenHub.getSyntheticTokensInfo([1, 3]);
       expect(tokens.length).to.equal(2);
       expect(tokens[0].tokenIndex).to.equal(1);
       expect(tokens[0].syntheticTokenInfo.tokenAddress).to.equal(syntheticUsdtToken.address);
@@ -1315,7 +1307,7 @@ describe("Synthetic Token System", function () {
 
     // Test getSyntheticTokenInfo
     it("should return correct token info for existing token", async function () {
-      const tokenInfo = await syntheticTokenHubGetters.getSyntheticTokenInfo(1);
+      const tokenInfo = await syntheticTokenHub.getSyntheticTokenInfo(1);
       expect(tokenInfo.tokenIndex).to.equal(1);
       expect(tokenInfo.syntheticTokenInfo.tokenAddress).to.equal(syntheticUsdtToken.address);
       expect(tokenInfo.syntheticTokenInfo.tokenSymbol).to.equal("USDT");
@@ -1324,27 +1316,27 @@ describe("Synthetic Token System", function () {
     });
 
     it("should revert for non-existent token index", async function () {
-      await expect(syntheticTokenHubGetters.getSyntheticTokenInfo(999)).to.be.revertedWith("Token not found");
+      await expect(syntheticTokenHub.getSyntheticTokenInfo(999)).to.be.revertedWith("Token not found");
     });
 
     it("should revert for zero token index", async function () {
-      await expect(syntheticTokenHubGetters.getSyntheticTokenInfo(0)).to.be.revertedWith("Invalid token index");
+      await expect(syntheticTokenHub.getSyntheticTokenInfo(0)).to.be.revertedWith("Invalid token index");
     });
 
     // Test isTokenRegistered
     it("should return true for registered token", async function () {
-      const isRegistered = await syntheticTokenHubGetters.isTokenRegistered(syntheticUsdtToken.address);
+      const isRegistered = await syntheticTokenHub.isTokenRegistered(syntheticUsdtToken.address);
       expect(isRegistered).to.be.true;
     });
 
     it("should return false for unregistered token", async function () {
-      const isRegistered = await syntheticTokenHubGetters.isTokenRegistered(ethers.constants.AddressZero);
+      const isRegistered = await syntheticTokenHub.isTokenRegistered(ethers.constants.AddressZero);
       expect(isRegistered).to.be.false;
     });
 
     // Test edge cases and error handling
     it("should handle multiple chain registrations correctly", async function () {
-      const tokenInfo = await syntheticTokenHubGetters.getSyntheticTokenInfo(1);
+      const tokenInfo = await syntheticTokenHub.getSyntheticTokenInfo(1);
       for (const remoteToken of tokenInfo.remoteTokens) {
         expect(remoteToken.eid).to.be.gt(0);
         expect(remoteToken.remoteTokenInfo.remoteAddress).to.not.equal(ethers.constants.AddressZero);
@@ -1353,21 +1345,21 @@ describe("Synthetic Token System", function () {
 
     it("should maintain consistent bidirectional mappings", async function () {
       // Check USDT token mappings
-      const syntheticAddress = await syntheticTokenHubGetters.getSyntheticAddressByRemoteAddress(eidB, bUSDT.address);
-      const remoteAddress = await syntheticTokenHubGetters.getRemoteAddressBySyntheticAddress(eidB, syntheticAddress);
-      expect(remoteAddress).to.equal(bUSDT.address);
+      const syntheticAddress = await syntheticTokenHub.getSyntheticAddressByRemoteAddress(eidB, toBytes32(bUSDT.address));
+      const remoteAddress = await syntheticTokenHub.getRemoteAddressBySyntheticAddress(eidB, syntheticAddress);
+      expect(remoteAddress).to.equal(toBytes32(bUSDT.address));
     });
   });
 
   describe("SyntheticTokenHubGetters MinBridgeAmt Tests", function () {
     it("should correctly return minBridgeAmt via getRemoteTokenInfo", async function () {
-      const remoteInfo = await syntheticTokenHubGetters.getRemoteTokenInfo(syntheticUsdtToken.address, eidB);
+      const remoteInfo = await syntheticTokenHub.getRemoteTokenInfo(syntheticUsdtToken.address, eidB);
       // Value set during linking: ethers.utils.parseUnits("1", 6)
       // Stored in RemoteTokenInfo in synthetic decimals. Delta is 0 for USDT.
       const expectedMinBridgeAmt = ethers.utils.parseUnits("1", 6);
       expect(remoteInfo.minBridgeAmt).to.equal(expectedMinBridgeAmt);
 
-      const remoteInfoWBTC = await syntheticTokenHubGetters.getRemoteTokenInfo(syntheticBtcToken.address, eidC);
+      const remoteInfoWBTC = await syntheticTokenHub.getRemoteTokenInfo(syntheticBtcToken.address, eidC);
       // Value set during linking: ethers.utils.parseUnits("0.0001", 8)
       // Stored in RemoteTokenInfo in synthetic decimals. Delta is 0 for WBTC.
       const expectedMinBridgeAmtWBTC = ethers.utils.parseUnits("0.0001", 8);
@@ -1375,21 +1367,21 @@ describe("Synthetic Token System", function () {
     });
 
     it("should correctly return minBridgeAmt via getMinBridgeAmount", async function () {
-      const minBridgeAmt = await syntheticTokenHubGetters.getMinBridgeAmount(syntheticUsdtToken.address, eidB);
+      const minBridgeAmt = await syntheticTokenHub.getMinBridgeAmount(syntheticUsdtToken.address, eidB);
       const expectedMinBridgeAmt = ethers.utils.parseUnits("1", 6);
       expect(minBridgeAmt).to.equal(expectedMinBridgeAmt);
 
-      const minBridgeAmtWBTC = await syntheticTokenHubGetters.getMinBridgeAmount(syntheticBtcToken.address, eidC);
+      const minBridgeAmtWBTC = await syntheticTokenHub.getMinBridgeAmount(syntheticBtcToken.address, eidC);
       const expectedMinBridgeAmtWBTC = ethers.utils.parseUnits("0.0001", 8);
       expect(minBridgeAmtWBTC).to.equal(expectedMinBridgeAmtWBTC);
     });
 
     it("getMinBridgeAmount should return 0 for unlinked token/eid", async function () {
       const nonExistentTokenAddress = "0x1230000000000000000000000000000000000123";
-      const minBridgeAmt = await syntheticTokenHubGetters.getMinBridgeAmount(nonExistentTokenAddress, eidB);
+      const minBridgeAmt = await syntheticTokenHub.getMinBridgeAmount(nonExistentTokenAddress, eidB);
       expect(minBridgeAmt).to.equal(0);
 
-      const minBridgeAmtWrongEid = await syntheticTokenHubGetters.getMinBridgeAmount(syntheticUsdtToken.address, 999); // Non-existent EID
+      const minBridgeAmtWrongEid = await syntheticTokenHub.getMinBridgeAmount(syntheticUsdtToken.address, 999); // Non-existent EID
       expect(minBridgeAmtWrongEid).to.equal(0);
     });
   });

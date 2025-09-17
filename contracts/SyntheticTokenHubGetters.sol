@@ -3,6 +3,7 @@
 pragma solidity 0.8.23;
 
 import { ISyntheticTokenHubGetters } from "./interfaces/ISyntheticTokenHubGetters.sol";
+import { SyntheticTokenHub } from "./SyntheticTokenHub.sol";
 
 /**
  * @title SyntheticTokenHubGetters
@@ -40,6 +41,7 @@ contract SyntheticTokenHubGetters is ISyntheticTokenHubGetters {
     uint256 private constant TOKEN_CHAIN_LIST_OFFSET = 3; // Offset for the chainList dynamic array field
 
     address public immutable hub; // The address of the SyntheticTokenHub contract whose storage is being read.
+    SyntheticTokenHub public immutable hubContract;
 
     /**
      * @notice Constructor to set the SyntheticTokenHub address.
@@ -47,6 +49,7 @@ contract SyntheticTokenHubGetters is ISyntheticTokenHubGetters {
      */
     constructor(address _hub) {
         hub = _hub;
+        hubContract = SyntheticTokenHub(hub);
     }
 
     /**
@@ -54,9 +57,7 @@ contract SyntheticTokenHubGetters is ISyntheticTokenHubGetters {
      * @return uint256 The count of synthetic tokens.
      */
     function getSyntheticTokenCount() external view returns (uint256) {
-        // Reads the storage slot corresponding to _syntheticTokenCount in SyntheticTokenHub.
-        bytes32 countData = getStorageSlotData(bytes32(SYNTHETIC_TOKEN_COUNT_SLOT));
-        return uint256(countData);
+        return hubContract.getSyntheticTokenCount();
     }
 
     /**
@@ -95,13 +96,13 @@ contract SyntheticTokenHubGetters is ISyntheticTokenHubGetters {
     function getRemoteAddressBySyntheticAddress(
         uint32 _eid,
         address _syntheticAddress
-    ) external view returns (address) {
+    ) external view returns (bytes32) {
         // Calculates the storage slot for the nested mapping `_remoteAddressBySyntheticAddress[eid][syntheticAddress]`.
         bytes32 baseSlot = bytes32(uint256(REMOTE_BY_SYNTHETIC_MAP_SLOT)); // Base slot of the mapping
         bytes32 eidSlot = keccak256(abi.encode(_eid, baseSlot)); // Slot for the inner mapping: mapping(address => address)
         bytes32 finalSlot = keccak256(abi.encode(_syntheticAddress, eidSlot)); // Slot for the final address value
         bytes32 data = getStorageSlotData(finalSlot);
-        return address(uint160(uint256(data))); // Convert bytes32 to address
+        return data; // Plain bytes32
     }
 
     /**
@@ -113,7 +114,7 @@ contract SyntheticTokenHubGetters is ISyntheticTokenHubGetters {
      */
     function getSyntheticAddressByRemoteAddress(
         uint32 _eid,
-        address _remoteAddress
+        bytes32 _remoteAddress
     ) external view returns (address) {
         // Calculates the storage slot for the nested mapping `_syntheticAddressByRemoteAddress[eid][remoteAddress]`.
         bytes32 baseSlot = bytes32(uint256(SYNTHETIC_BY_REMOTE_MAP_SLOT)); // Base slot of the mapping
@@ -365,10 +366,6 @@ contract SyntheticTokenHubGetters is ISyntheticTokenHubGetters {
             )
         );
 
-        // Read the first storage slot which contains `remoteAddress` and `decimalsDelta` packed together.
-        bytes32 data1 = getStorageSlotData(baseSlot);
-        uint256 rawValue1 = uint256(data1);
-
         // Extract fields based on the presumed packing order in SyntheticTokenHub's RemoteTokenInfo struct:
         // struct RemoteTokenInfo {
         //    address remoteAddress;      // 160 bits (20 bytes) - occupies bits 0-159
@@ -378,18 +375,20 @@ contract SyntheticTokenHubGetters is ISyntheticTokenHubGetters {
         // }
 
         // 1. Extract `remoteAddress` (first 160 bits / 20 bytes of the slot).
-        address remoteAddressVal = address(uint160(rawValue1)); // Lower 160 bits are the address.
+        bytes32 data0 = getStorageSlotData(bytes32(uint256(baseSlot)));
+        bytes32 remoteAddressVal = data0; // Lower 160 bits are the address.
 
         // 2. Extract `decimalsDelta` (next 8 bits, shifted right by 160 bits).
         // The value is masked with 0xFF to get the 8 bits, then cast to int8.
-        int8 decimalsDeltaVal = int8(uint8((rawValue1 >> 160) & 0xFF));
+        bytes32 data1 = getStorageSlotData(bytes32(uint256(baseSlot) + 1));
+        int8 decimalsDeltaVal = int8(uint8(uint256(data1)));
 
         // 3. Extract `totalBalance` from the next consecutive storage slot.
-        bytes32 data2 = getStorageSlotData(bytes32(uint256(baseSlot) + 1));
+        bytes32 data2 = getStorageSlotData(bytes32(uint256(baseSlot) + 2));
         uint256 totalBalanceVal = uint256(data2);
 
         // 4. Extract `minBridgeAmt` from the next consecutive storage slot (baseSlot + 2).
-        bytes32 data3 = getStorageSlotData(bytes32(uint256(baseSlot) + 2));
+        bytes32 data3 = getStorageSlotData(bytes32(uint256(baseSlot) + 3));
         uint256 minBridgeAmtVal = uint256(data3);
 
         return

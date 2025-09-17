@@ -14,15 +14,20 @@ struct Asset {
     uint256 tokenAmount;
 }
 
+struct CommonAsset {
+    bytes32 tokenAddress;
+    uint256 tokenAmount;
+}
+
 struct SwapParams {
-    address from;
-    address to;
+    bytes32 from;
+    bytes32 to;
     address evmAddress;
     address syntheticTokenOut;
     uint128 gasLimit;
     uint32 dstEid;
     uint256 value;
-    Asset[] assets;
+    CommonAsset[] assets;
     bytes commands;
     bytes[] inputs;
     uint256 minimumAmountOut;
@@ -45,6 +50,14 @@ struct GatewaySwapParams {
 struct AvailableToken {
     bool onPause;
     address tokenAddress;
+    address syntheticTokenAddress;
+    int8 decimalsDelta;
+    uint256 minBridgeAmt;
+}
+
+struct CommonAvailableToken {
+    bool onPause;
+    bytes32 tokenAddress;
     address syntheticTokenAddress;
     int8 decimalsDelta;
     uint256 minBridgeAmt;
