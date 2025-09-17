@@ -10,7 +10,7 @@ import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/I
 import { OApp, MessagingFee, Origin } from "@layerzerolabs/oapp-evm/contracts/oapp/OApp.sol";
 import { MessagingReceipt } from "@layerzerolabs/oapp-evm/contracts/oapp/OAppSender.sol";
 import { OAppOptionsType3 } from "@layerzerolabs/oapp-evm/contracts/oapp/libs/OAppOptionsType3.sol";
-import { MessageType, Asset, CommonSwapParams, AvailableToken } from "./interfaces/ICommonStructs.sol";
+import { MessageType, Asset, GatewaySwapParams, AvailableToken } from "./interfaces/ICommonStructs.sol";
 
 // import { console } from "hardhat/console.sol";
 
@@ -251,7 +251,7 @@ contract GatewayVault is OApp, OAppOptionsType3 {
      * @custom:reverts if any token is paused, amount is too small after dust removal, or token not found.
      */
     function swap(
-        CommonSwapParams memory _swapParams,
+        GatewaySwapParams memory _swapParams,
         bytes calldata _options,
         Asset[] calldata _assets
     ) external payable returns (MessagingReceipt memory) {
@@ -305,7 +305,7 @@ contract GatewayVault is OApp, OAppOptionsType3 {
      * @return nativeFee The estimated native gas fee for the LayerZero message.
      */
     function quoteSwap(
-        CommonSwapParams memory _swapParams,
+        GatewaySwapParams memory _swapParams,
         bytes calldata _options,
         Asset[] calldata _assets
     ) public view returns (uint256 nativeFee) {
@@ -401,11 +401,11 @@ contract GatewayVault is OApp, OAppOptionsType3 {
      * @param _payload The decoded payload specific to RevertSwap.
      */
     function _processMessageRevertSwap(MessageType messageType, bytes memory _payload) internal {
-        (address _from, , Asset[] memory _assets, bytes32 _guid, string memory _reason) = abi
-            .decode(_payload, (address, address, Asset[], bytes32, string));
+        (bytes32 _from, , Asset[] memory _assets, bytes32 _guid, string memory _reason) = abi
+            .decode(_payload, (bytes32, bytes32, Asset[], bytes32, string));
 
-        _transferBatch(_assets, _from);
-        emit ReceivedRevert(messageType, _guid, _from.toBytes32(), _reason);
+        _transferBatch(_assets, _from.toAddress());
+        emit ReceivedRevert(messageType, _guid, _from, _reason);
     }
 
     /**
@@ -422,13 +422,13 @@ contract GatewayVault is OApp, OAppOptionsType3 {
         bytes32 _guid,
         uint32 _srcEid
     ) internal {
-        (address _from, address _to, Asset[] memory _assets) = abi.decode(
+        (bytes32 _from, bytes32 _to, Asset[] memory _assets) = abi.decode(
             _payload,
-            (address, address, Asset[])
+            (bytes32, bytes32, Asset[])
         );
 
-        _transferBatch(_assets, _to);
-        emit MessageReceived(messageType, _srcEid, _guid, _from.toBytes32(), _to.toBytes32(), _assets);
+        _transferBatch(_assets, _to.toAddress());
+        emit MessageReceived(messageType, _srcEid, _guid, _from, _to, _assets);
     }
 
     /**

@@ -27,7 +27,7 @@ struct SwapParams {
     uint256 minimumAmountOut;
 }
 
-struct CommonSwapParams {
+struct GatewaySwapParams {
     bytes32 from;
     bytes32 to;
     address syntheticTokenOut;

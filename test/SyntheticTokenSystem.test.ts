@@ -44,7 +44,7 @@ import {
 import { TradeType } from "@uniswap/sdk-core";
 import { MixedRouteTrade, MixedRouteSDK, Trade as RouterTrade } from "@uniswap/router-sdk";
 import { CommandType, RoutePlanner } from "./testHelper/planner";
-import { CommonSwapParamsStruct, AssetStruct } from "../typechain-types/contracts/GatewayVault";
+import { GatewaySwapParamsStruct, AssetStruct } from "../typechain-types/contracts/GatewayVault";
 import { encodePath, getMultiHopQuote, priceToTick, addV3ExactInTrades } from "./testHelper/helpers";
 
 const toBytes32 = function(address: string): string {
@@ -717,7 +717,7 @@ describe.only("Synthetic Token System", function () {
       ]);
       const { commands, inputs } = planner;
 
-      const swapParams: CommonSwapParamsStruct = {
+      const swapParams: GatewaySwapParamsStruct = {
         from: toBytes32(user1.address),
         to: toBytes32(user1.address), // Send the result to the same user on Chain C
         syntheticTokenOut: syntheticBtcToken.address,
@@ -786,7 +786,7 @@ describe.only("Synthetic Token System", function () {
         .toString();
 
       // 2. Create SwapParams with invalid data
-      const swapParams: CommonSwapParamsStruct = {
+      const swapParams: GatewaySwapParamsStruct = {
         from: toBytes32(user1.address),
         to: toBytes32(user1.address),
         syntheticTokenOut: syntheticBtcToken.address,
@@ -889,7 +889,7 @@ describe.only("Synthetic Token System", function () {
         .toHex()
         .toString();
 
-      const swapParams: CommonSwapParamsStruct = {
+      const swapParams: GatewaySwapParamsStruct = {
         from: toBytes32(user2.address),
         to: toBytes32(user2.address),
         syntheticTokenOut: syntheticBtcToken.address,
