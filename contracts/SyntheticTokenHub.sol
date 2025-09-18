@@ -12,7 +12,7 @@ import { ISyntheticToken } from "./interfaces/ISyntheticToken.sol";
 import { SyntheticToken } from "./SyntheticToken.sol";
 import { OptionsBuilder } from "@layerzerolabs/oapp-evm/contracts/oapp/libs/OptionsBuilder.sol";
 import { IBalancer } from "./interfaces/IBalancer.sol";
-import { MessageType, Asset, CommonAsset, SwapParams, CommonAvailableToken } from "./interfaces/ICommonStructs.sol";
+import { MessageType, Asset, CommonAsset, CommonSwapParams, CommonAvailableToken } from "./interfaces/ICommonStructs.sol";
 
 import { SyntheticTokenHubHelpers } from "./libraries/SyntheticTokenHubHelpers.sol";
 
@@ -488,7 +488,7 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
      * @return payload The encoded LayerZero message payload to be sent (either a swap confirmation or a revert message).
      */
     function processSwapMessage(
-        SwapParams memory params,
+        CommonSwapParams memory params,
         uint32 _srcEid
     ) external returns (bytes memory payload) {
         if (msg.sender != address(this)) revert InvalidSwapSender();
@@ -603,7 +603,7 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
         if (messageType == MessageType.Deposit) {
             _processDepositMessage(payload, _guid, _origin.srcEid);
         } else if (messageType == MessageType.Swap) {
-            SwapParams memory params = abi.decode(payload, (SwapParams));
+            CommonSwapParams memory params = abi.decode(payload, (CommonSwapParams));
             if (msg.value < params.value) {
                 revert InsufficientValue(msg.value, params.value);
             }

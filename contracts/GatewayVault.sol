@@ -10,7 +10,7 @@ import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/I
 import { OApp, MessagingFee, Origin } from "@layerzerolabs/oapp-evm/contracts/oapp/OApp.sol";
 import { MessagingReceipt } from "@layerzerolabs/oapp-evm/contracts/oapp/OAppSender.sol";
 import { OAppOptionsType3 } from "@layerzerolabs/oapp-evm/contracts/oapp/libs/OAppOptionsType3.sol";
-import { MessageType, Asset, GatewaySwapParams, AvailableToken } from "./interfaces/ICommonStructs.sol";
+import { MessageType, Asset, GatewaySwapParams, EvmAvailableToken } from "./interfaces/ICommonStructs.sol";
 
 // import { console } from "hardhat/console.sol";
 
@@ -62,7 +62,7 @@ contract GatewayVault is OApp, OAppOptionsType3 {
     }
 
     uint32 public immutable DST_EID; // Endpoint ID of the destination chain where the SyntheticTokenHub resides.
-    AvailableToken[] public availableTokens; // Array storing information about tokens available for deposit/swap.
+    EvmAvailableToken[] public availableTokens; // Array storing information about tokens available for deposit/swap.
     mapping(address => uint256) private _tokenIndexPlusOne; // Mapping from original token address to its index in `availableTokens` + 1 (0 means not found).
 
     /**
@@ -130,7 +130,7 @@ contract GatewayVault is OApp, OAppOptionsType3 {
      * @param guid The LayerZero GUID of the linkTokenToHub message.
      * @param newTokens Array of tokens that were linked.
      */
-    event AddNewTokens(bytes32 guid, AvailableToken[] newTokens);
+    event AddNewTokens(bytes32 guid, EvmAvailableToken[] newTokens);
 
     /**
      * @notice Gets the number of currently available (linked) tokens.
@@ -200,7 +200,7 @@ contract GatewayVault is OApp, OAppOptionsType3 {
         TokenSetupConfig[] calldata _tokensConfig,
         bytes calldata _options
     ) external payable onlyOwner {
-        AvailableToken[] memory newTokens = _setupConfigToAvailableToken(_tokensConfig);
+        EvmAvailableToken[] memory newTokens = _setupConfigToAvailableToken(_tokensConfig);
         for (uint256 i = 0; i < newTokens.length; i++) {
             require(_tokenIndexPlusOne[newTokens[i].tokenAddress] == 0, "Token already linked");
             availableTokens.push(newTokens[i]);
@@ -273,7 +273,7 @@ contract GatewayVault is OApp, OAppOptionsType3 {
         TokenSetupConfig[] calldata _tokensConfigs,
         bytes calldata _options
     ) public view returns (uint256 nativeFee) {
-        AvailableToken[] memory newTokens = _setupConfigToAvailableToken(_tokensConfigs);
+        EvmAvailableToken[] memory newTokens = _setupConfigToAvailableToken(_tokensConfigs);
         bytes memory msgData = abi.encode(newTokens);
         bytes memory payload = abi.encode(MessageType.LinkToken, msgData);
         nativeFee = (_quote(DST_EID, payload, _options, false)).nativeFee;
@@ -319,17 +319,17 @@ contract GatewayVault is OApp, OAppOptionsType3 {
      * @dev Converts an array of `TokenSetupConfig` to `AvailableToken` structs.
      * Fetches token decimals and calculates `decimalsDelta`.
      * @param _tokensConfig Input array of token configurations.
-     * @return _availableTokens Array of `AvailableToken` structs.
+     * @return _availableTokens Array of `EvmAvailableToken` structs.
      * @custom:reverts if a token address does not support IERC20Metadata (cannot fetch decimals).
      */
     function _setupConfigToAvailableToken(
         TokenSetupConfig[] calldata _tokensConfig
-    ) internal view returns (AvailableToken[] memory _availableTokens) {
-        _availableTokens = new AvailableToken[](_tokensConfig.length);
+    ) internal view returns (EvmAvailableToken[] memory _availableTokens) {
+        _availableTokens = new EvmAvailableToken[](_tokensConfig.length);
 
         for (uint256 i = 0; i < _tokensConfig.length; i++) {
             uint8 tokenDecimals = IERC20Metadata(_tokensConfig[i].tokenAddress).decimals();
-            AvailableToken memory _availableToken = AvailableToken({
+            EvmAvailableToken memory _availableToken = EvmAvailableToken({
                 onPause: _tokensConfig[i].onPause,
                 tokenAddress: _tokensConfig[i].tokenAddress,
                 syntheticTokenAddress: _tokensConfig[i].syntheticTokenAddress,
@@ -482,7 +482,7 @@ contract GatewayVault is OApp, OAppOptionsType3 {
     function _getAllAvailableTokenByIndex(
         uint256 _index
     ) private view returns (TokenDetail memory) {
-        AvailableToken memory avToken = availableTokens[_index];
+        EvmAvailableToken memory avToken = availableTokens[_index];
         address tokenAddress = avToken.tokenAddress;
 
         return
@@ -512,7 +512,7 @@ contract GatewayVault is OApp, OAppOptionsType3 {
         for (uint256 i = 0; i < _assets.length; i++) {
             Asset calldata _assetEntry = _assets[i];
             uint256 _index = getTokenIndex(_assetEntry.tokenAddress);
-            AvailableToken memory _availableToken = availableTokens[_index];
+            EvmAvailableToken memory _availableToken = availableTokens[_index];
             require(!_availableToken.onPause, "Token is paused");
 
             if (_assetEntry.tokenAmount < _availableToken.minBridgeAmt) {

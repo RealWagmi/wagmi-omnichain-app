@@ -19,7 +19,7 @@ struct CommonAsset {
     uint256 tokenAmount;
 }
 
-struct SwapParams {
+struct CommonSwapParams {
     bytes32 from;
     bytes32 to;
     address evmAddress;
@@ -47,7 +47,7 @@ struct GatewaySwapParams {
     uint256 minimumAmountOut;
 }
 
-struct AvailableToken {
+struct EvmAvailableToken {
     bool onPause;
     address tokenAddress;
     address syntheticTokenAddress;
