@@ -919,21 +919,45 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
         }
     }
 
+    /**
+     * @notice Gets the total number of synthetic tokens created in the hub.
+     * @return uint256 The count of synthetic tokens.
+     */
+
     function getSyntheticTokenCount() external view returns (uint256) {
         return _syntheticTokenCount;
     }
 
+    /**
+     * @notice Retrieves information about a remote token linked to a local synthetic token on a specific chain.
+     * @param _tokenAddress The address of the local synthetic token.
+     * @param _eid The endpoint ID (chain ID) of the remote network.
+     * @return RemoteTokenInfo A struct containing the remote token's address, decimals delta, and total balance.
+     */
     function getRemoteTokenInfo(
-        address tokenAddress,
-        uint32 eid
+        address _tokenAddress,
+        uint32 _eid
     ) public view returns (RemoteTokenInfo memory) {
-        return _remoteTokens[tokenAddress][eid];
+        return _remoteTokens[_tokenAddress][_eid];
     }
 
+    /**
+     * @notice Gets the token index for a given synthetic token address.
+     * @dev The token index is `_tokenIndexByAddress[tokenAddress]` in SyntheticTokenHub.
+     * @param _tokenAddress The address of the synthetic token.
+     * @return uint256 The index of the token (0 if not found, though other functions might require >0).
+     */
     function getTokenIndexByAddress(address _tokenAddress) external view returns (uint256) {
         return _tokenIndexByAddress[_tokenAddress];
     }
 
+    /**
+     * @notice Gets the remote token address linked to a local synthetic token address on a specific chain.
+     * @dev Reads `_remoteAddressBySyntheticAddress[eid][syntheticAddress]` from SyntheticTokenHub.
+     * @param _eid The endpoint ID (chain ID) of the remote network.
+     * @param _syntheticAddress The address of the local synthetic token.
+     * @return address The address of the corresponding token on the remote chain.
+     */
     function getRemoteAddressBySyntheticAddress(
         uint32 _eid,
         address _syntheticAddress
@@ -941,6 +965,13 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
         return _remoteAddressBySyntheticAddress[_eid][_syntheticAddress];
     }
 
+    /**
+     * @notice Gets the local synthetic token address linked to a remote token address on a specific chain.
+     * @dev Reads `_syntheticAddressByRemoteAddress[eid][remoteAddress]` from SyntheticTokenHub.
+     * @param _eid The endpoint ID (chain ID) of the remote network.
+     * @param _remoteAddress The address of the token on the remote chain.
+     * @return address The address of the corresponding local synthetic token.
+     */
     function getSyntheticAddressByRemoteAddress(
         uint32 _eid,
         bytes32 _remoteAddress
@@ -949,14 +980,34 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
     }
 
     // ЗДЕСЬ НУЖЕН BYTES32
+
+    /**
+     * @notice Gets the GatewayVault address for a specific endpoint ID (chain ID).
+     * @dev Reads `_gatewayVaultByEid[eid]` from SyntheticTokenHub.
+     * @param _eid The endpoint ID (chain ID).
+     * @return address The address of the GatewayVault on the specified chain.
+     */
     function getGatewayVaultByEid(uint32 _eid) external view returns (address) {
         return _gatewayVaultByEid[_eid];
     }
 
+    /**
+     * @notice Gets the accumulated bonus balance for a specific synthetic token on a specific chain (eid).
+     * @dev Reads `_bonusBalance[tokenAddress][eid]` from SyntheticTokenHub.
+     * @param _tokenAddress The address of the local synthetic token.
+     * @param _eid The endpoint ID (chain ID).
+     * @return uint256 The bonus balance amount.
+     */
     function getBonusBalance(address _tokenAddress, uint32 _eid) external view returns (uint256) {
         return _bonusBalance[_tokenAddress][_eid];
     }
 
+    /**
+     * @notice Returns comprehensive information about a specific synthetic token, including its remote counterparts.
+     * @dev Reads various storage slots related to the `SyntheticTokenInfo` struct and its linked `RemoteTokenInfo` structs.
+     * @param _tokenIndex The 1-based index of the synthetic token.
+     * @return SyntheticTokenView A struct containing details of the synthetic token and its linked remote tokens.
+     */
     function getSyntheticTokenInfo(
         uint256 _tokenIndex
     ) public view returns (SyntheticTokenView memory) {
@@ -987,6 +1038,14 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
             });
     }
 
+    /**
+     * @notice Returns comprehensive information about multiple synthetic tokens, including their remote counterparts.
+     * @dev If `_tokenIndices` is an empty array, it attempts to fetch information for all registered synthetic tokens up to `syntheticTokenCount`.
+     * Otherwise, it fetches information for the specified token indices.
+     * This function iterates and calls `getSyntheticTokenInfo` for each token, potentially making many `staticcall`s.
+     * @param _tokenIndices Array of token indices to get info for. If empty, returns all tokens based on `getSyntheticTokenCount()`.
+     * @return SyntheticTokenView[] An array of `SyntheticTokenView` structs, each containing details of a synthetic token and its linked remote tokens.
+     */
     function getSyntheticTokensInfo(
         uint256[] memory _tokenIndices
     ) external view returns (SyntheticTokenView[] memory) {
@@ -1007,16 +1066,35 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
         return tokens;
     }
 
+    /**
+     * @notice Gets the 1-based index of a synthetic token by its address.
+     * @dev This is similar to `getTokenIndexByAddress` but includes a `require` to ensure the token is found.
+     * @param _tokenAddress The address of the synthetic token.
+     * @return uint256 The 1-based index of the token.
+     * @custom:reverts if the token is not found (index is 0).
+     */
     function getSyntheticTokenIndex(address _tokenAddress) external view returns (uint256) {
         uint256 index = _tokenIndexByAddress[_tokenAddress];
         require(index > 0, "Token not found"); // Ensure the token exists.
         return index;
     }
 
+    /**
+     * @notice Checks if a synthetic token is registered (i.e., has an index greater than 0).
+     * @param _tokenAddress The address of the synthetic token.
+     * @return bool True if the token is registered, false otherwise.
+     */
     function isTokenRegistered(address _tokenAddress) external view returns (bool) {
         return _tokenIndexByAddress[_tokenAddress] > 0;
     }
 
+    /**
+     * @notice Gets the minimum bridge amount for a specific synthetic token on a specific chain (eid).
+     * @dev Reads `minBridgeAmt` from the `RemoteTokenInfo` struct in SyntheticTokenHub.
+     * @param _syntheticTokenAddress The address of the local synthetic token.
+     * @param _eid The endpoint ID (chain ID).
+     * @return uint256 The minimum bridge amount in synthetic token decimals.
+     */
     function getMinBridgeAmount(
         address _syntheticTokenAddress,
         uint32 _eid
