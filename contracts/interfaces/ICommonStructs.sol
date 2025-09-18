@@ -9,7 +9,7 @@ enum MessageType {
     RevertSwap
 }
 
-struct Asset {
+struct EvmAsset {
     address tokenAddress;
     uint256 tokenAmount;
 }
@@ -33,7 +33,7 @@ struct CommonSwapParams {
     uint256 minimumAmountOut;
 }
 
-struct GatewaySwapParams {
+struct EvmSwapParams {
     bytes32 from;
     bytes32 to;
     address evmAddress;
@@ -41,7 +41,7 @@ struct GatewaySwapParams {
     uint128 gasLimit;
     uint32 dstEid;
     uint256 value;
-    Asset[] assets;
+    EvmAsset[] assets;
     bytes commands;
     bytes[] inputs;
     uint256 minimumAmountOut;

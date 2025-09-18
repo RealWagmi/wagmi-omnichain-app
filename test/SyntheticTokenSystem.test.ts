@@ -42,7 +42,7 @@ import {
 import { TradeType } from "@uniswap/sdk-core";
 import { MixedRouteTrade, MixedRouteSDK, Trade as RouterTrade } from "@uniswap/router-sdk";
 import { CommandType, RoutePlanner } from "./testHelper/planner";
-import { GatewaySwapParamsStruct, AssetStruct } from "../typechain-types/contracts/GatewayVault";
+import { EvmSwapParamsStruct, EvmAssetStruct } from "../typechain-types/contracts/GatewayVault";
 import { encodePath, getMultiHopQuote, priceToTick, addV3ExactInTrades } from "./testHelper/helpers";
 import { assert } from "console";
 
@@ -456,7 +456,7 @@ describe("Synthetic Token System", function () {
 
       // Prepare message sending
       const options = Options.newOptions().addExecutorLzReceiveOption(LZ_GAS_LIMIT, 0).toHex().toString();
-      const assets: AssetStruct[] = [
+      const assets: EvmAssetStruct[] = [
         { tokenAddress: bUSDT.address, tokenAmount: depositUsdtAmount },
         { tokenAddress: bWETH.address, tokenAmount: depositWethAmount },
         { tokenAddress: bWBTC.address, tokenAmount: depositBtcAmount },
@@ -478,7 +478,7 @@ describe("Synthetic Token System", function () {
       expect(await syntheticBtcToken.balanceOf(user2.address)).to.equal(depositBtcAmount);
       expect(await syntheticWethToken.balanceOf(user2.address)).to.equal(depositWethAmount);
 
-      const assetsC: AssetStruct[] = [
+      const assetsC: EvmAssetStruct[] = [
         { tokenAddress: cUSDT.address, tokenAmount: depositUsdtAmount },
         { tokenAddress: cWETH.address, tokenAmount: depositWethAmount },
         { tokenAddress: cWBTC.address, tokenAmount: depositBtcAmount },
@@ -512,7 +512,7 @@ describe("Synthetic Token System", function () {
       const options = Options.newOptions().addExecutorLzReceiveOption(LZ_GAS_LIMIT, 0).toHex().toString();
 
       // Test case: amount less than minBridgeAmt
-      const assetsSmall: AssetStruct[] = [{ tokenAddress: bUSDT.address, tokenAmount: smallAmtUSDT }];
+      const assetsSmall: EvmAssetStruct[] = [{ tokenAddress: bUSDT.address, tokenAmount: smallAmtUSDT }];
 
       // Expect quoteDeposit to revert because _checkAndTransform will fail
       await expect(gatewayVaultB.quoteDeposit(user1.address, assetsSmall, options)).to.be.revertedWith(
@@ -530,7 +530,7 @@ describe("Synthetic Token System", function () {
       ).to.be.revertedWith("Amount is less than minimum bridge amount for this token.");
 
       // Test case: amount greater than or equal to minBridgeAmt
-      const assetsValid: AssetStruct[] = [{ tokenAddress: bUSDT.address, tokenAmount: validAmtUSDT }];
+      const assetsValid: EvmAssetStruct[] = [{ tokenAddress: bUSDT.address, tokenAmount: validAmtUSDT }];
       const nativeFeeValid = await gatewayVaultB.quoteDeposit(user1.address, assetsValid, options);
       const initialSynthUSDTUser1 = await syntheticUsdtToken.balanceOf(user1.address);
 
@@ -716,7 +716,7 @@ describe("Synthetic Token System", function () {
       ]);
       const { commands, inputs } = planner;
 
-      const swapParams: GatewaySwapParamsStruct = {
+      const swapParams: EvmSwapParamsStruct = {
         from: toBytes32(user1.address),
         to: toBytes32(user1.address), // Send the result to the same user on Chain C
         evmAddress: user1.address, // fallback address to receive dust and gas leftovers
@@ -786,7 +786,7 @@ describe("Synthetic Token System", function () {
         .toString();
 
       // 2. Create SwapParams with invalid data
-      const swapParams: GatewaySwapParamsStruct = {
+      const swapParams: EvmSwapParamsStruct = {
         from: toBytes32(user1.address),
         to: toBytes32(user1.address),
         evmAddress: user1.address, // fallback address to receive dust and gas leftovers
@@ -890,7 +890,7 @@ describe("Synthetic Token System", function () {
         .toHex()
         .toString();
 
-      const swapParams: GatewaySwapParamsStruct = {
+      const swapParams: EvmSwapParamsStruct = {
         from: toBytes32(user2.address),
         to: toBytes32(user2.address),
         evmAddress: user1.address, // fallback address to receive dust and gas leftovers

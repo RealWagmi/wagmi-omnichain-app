@@ -10,7 +10,7 @@ import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/I
 import { OApp, MessagingFee, Origin } from "@layerzerolabs/oapp-evm/contracts/oapp/OApp.sol";
 import { MessagingReceipt } from "@layerzerolabs/oapp-evm/contracts/oapp/OAppSender.sol";
 import { OAppOptionsType3 } from "@layerzerolabs/oapp-evm/contracts/oapp/libs/OAppOptionsType3.sol";
-import { MessageType, Asset, GatewaySwapParams, EvmAvailableToken } from "./interfaces/ICommonStructs.sol";
+import { MessageType, EvmAsset, EvmSwapParams, EvmAvailableToken } from "./interfaces/ICommonStructs.sol";
 
 // import { console } from "hardhat/console.sol";
 
@@ -98,7 +98,7 @@ contract GatewayVault is OApp, OAppOptionsType3 {
         bytes32 guid,
         bytes32 from,
         bytes32 to,
-        Asset[] assets
+        EvmAsset[] assets
     );
     /**
      * @dev Emitted when a cross-chain message (withdraw or swap confirmation) is received from SyntheticTokenHub.
@@ -115,7 +115,7 @@ contract GatewayVault is OApp, OAppOptionsType3 {
         bytes32 guid,
         bytes32 from,
         bytes32 to,
-        Asset[] assets
+        EvmAsset[] assets
     );
     /**
      * @dev Emitted when a revert message for a swap is received from SyntheticTokenHub.
@@ -223,17 +223,17 @@ contract GatewayVault is OApp, OAppOptionsType3 {
      * @dev User must have approved this contract to spend their tokens.
      * Tokens are transferred to this contract, and a LayerZero message is sent to SyntheticTokenHub.
      * @param _recepient The recipient address on the destination chain.
-     * @param _assets Array of `Asset` structs specifying tokens and amounts to deposit.
+     * @param _assets Array of `EvmAsset` structs specifying tokens and amounts to deposit.
      * @param _options LayerZero messaging options.
      * @return MessagingReceipt The receipt for the LayerZero message.
      * @custom:reverts if any token is paused, amount is too small after dust removal, or token not found.
      */
     function deposit(
         address _recepient,
-        Asset[] calldata _assets,
+        EvmAsset[] calldata _assets,
         bytes calldata _options
     ) external payable returns (MessagingReceipt memory) {
-        Asset[] memory assets = _checkAndTransform(_assets);
+        EvmAsset[] memory assets = _checkAndTransform(_assets);
         bytes memory msgData = abi.encode(msg.sender, _recepient, assets);
         bytes memory payload = abi.encode(MessageType.Deposit, msgData);
         return _sendCrossChainMessage(payload, _options, _recepient.toBytes32(), assets);
@@ -246,16 +246,16 @@ contract GatewayVault is OApp, OAppOptionsType3 {
      * is sent to the SyntheticTokenHub for processing.
      * @param _swapParams Parameters for the swap (recipient, destination EID, commands, inputs, etc.).
      * @param _options LayerZero messaging options.
-     * @param _assets Array of `Asset` structs specifying input tokens and amounts for the swap.
+     * @param _assets Array of `EvmAsset` structs specifying input tokens and amounts for the swap.
      * @return MessagingReceipt The receipt for the LayerZero message.
      * @custom:reverts if any token is paused, amount is too small after dust removal, or token not found.
      */
     function swap(
-        GatewaySwapParams memory _swapParams,
+        EvmSwapParams memory _swapParams,
         bytes calldata _options,
-        Asset[] calldata _assets
+        EvmAsset[] calldata _assets
     ) external payable returns (MessagingReceipt memory) {
-        Asset[] memory assets = _checkAndTransform(_assets);
+        EvmAsset[] memory assets = _checkAndTransform(_assets);
         _swapParams.from = msg.sender.toBytes32();
         _swapParams.assets = assets;
         bytes memory msgData = abi.encode(_swapParams);
@@ -282,16 +282,16 @@ contract GatewayVault is OApp, OAppOptionsType3 {
     /**
      * @notice Quotes the LayerZero messaging fee for a deposit operation.
      * @param _recepient The recipient address on the destination chain.
-     * @param _assets Array of `Asset` structs for the deposit.
+     * @param _assets Array of `EvmAsset` structs for the deposit.
      * @param _options LayerZero messaging options.
      * @return nativeFee The estimated native gas fee for the LayerZero message.
      */
     function quoteDeposit(
         address _recepient,
-        Asset[] calldata _assets,
+        EvmAsset[] calldata _assets,
         bytes calldata _options
     ) public view returns (uint256 nativeFee) {
-        Asset[] memory assets = _checkAndTransform(_assets);
+        EvmAsset[] memory assets = _checkAndTransform(_assets);
         bytes memory msgData = abi.encode(_recepient, _recepient, assets);
         bytes memory payload = abi.encode(MessageType.Deposit, msgData);
         nativeFee = (_quote(DST_EID, payload, _options, false)).nativeFee;
@@ -301,13 +301,13 @@ contract GatewayVault is OApp, OAppOptionsType3 {
      * @notice Quotes the LayerZero messaging fee for a swap operation.
      * @param _swapParams Parameters for the swap.
      * @param _options LayerZero messaging options.
-     * @param _assets Array of `Asset` structs for the swap input.
+     * @param _assets Array of `EvmAsset` structs for the swap input.
      * @return nativeFee The estimated native gas fee for the LayerZero message.
      */
     function quoteSwap(
-        GatewaySwapParams memory _swapParams,
+        EvmSwapParams memory _swapParams,
         bytes calldata _options,
-        Asset[] calldata _assets
+        EvmAsset[] calldata _assets
     ) public view returns (uint256 nativeFee) {
         _swapParams.assets = _checkAndTransform(_assets);
         bytes memory msgData = abi.encode(_swapParams);
@@ -352,7 +352,7 @@ contract GatewayVault is OApp, OAppOptionsType3 {
         bytes memory _payload,
         bytes memory _options,
         bytes32 _recepient,
-        Asset[] memory _assets
+        EvmAsset[] memory _assets
     ) internal returns (MessagingReceipt memory receipt) {
         _transferFromBatch(_assets);
         receipt = _lzSend(
@@ -401,8 +401,8 @@ contract GatewayVault is OApp, OAppOptionsType3 {
      * @param _payload The decoded payload specific to RevertSwap.
      */
     function _processMessageRevertSwap(MessageType messageType, bytes memory _payload) internal {
-        (bytes32 _from, , Asset[] memory _assets, bytes32 _guid, string memory _reason) = abi
-            .decode(_payload, (bytes32, bytes32, Asset[], bytes32, string));
+        (bytes32 _from, , EvmAsset[] memory _assets, bytes32 _guid, string memory _reason) = abi
+            .decode(_payload, (bytes32, bytes32, EvmAsset[], bytes32, string));
 
         _transferBatch(_assets, _from.toAddress());
         emit ReceivedRevert(messageType, _guid, _from, _reason);
@@ -422,9 +422,9 @@ contract GatewayVault is OApp, OAppOptionsType3 {
         bytes32 _guid,
         uint32 _srcEid
     ) internal {
-        (bytes32 _from, bytes32 _to, Asset[] memory _assets) = abi.decode(
+        (bytes32 _from, bytes32 _to, EvmAsset[] memory _assets) = abi.decode(
             _payload,
-            (bytes32, bytes32, Asset[])
+            (bytes32, bytes32, EvmAsset[])
         );
 
         _transferBatch(_assets, _to.toAddress());
@@ -433,24 +433,24 @@ contract GatewayVault is OApp, OAppOptionsType3 {
 
     /**
      * @dev Transfers a batch of assets to a recipient.
-     * @param _assets Array of `Asset` structs specifying tokens and amounts to transfer.
+     * @param _assets Array of `EvmAsset` structs specifying tokens and amounts to transfer.
      * @param _to The recipient address.
      */
-    function _transferBatch(Asset[] memory _assets, address _to) internal {
+    function _transferBatch(EvmAsset[] memory _assets, address _to) internal {
         for (uint256 i = 0; i < _assets.length; i++) {
-            Asset memory _asset = _assets[i];
+            EvmAsset memory _asset = _assets[i];
             _asset.tokenAddress.safeTransfer(_to, _asset.tokenAmount);
         }
     }
 
     /**
      * @dev Transfers a batch of assets from the `msg.sender` to this contract.
-     * @param _assets Array of `Asset` structs specifying tokens and amounts to transfer.
+     * @param _assets Array of `EvmAsset` structs specifying tokens and amounts to transfer.
      * @custom:reverts if any token transfer fails (e.g., insufficient allowance or balance).
      */
-    function _transferFromBatch(Asset[] memory _assets) internal {
+    function _transferFromBatch(EvmAsset[] memory _assets) internal {
         for (uint256 i = 0; i < _assets.length; i++) {
-            Asset memory _asset = _assets[i];
+            EvmAsset memory _asset = _assets[i];
             _asset.tokenAddress.safeTransferFrom(msg.sender, address(this), _asset.tokenAmount);
         }
     }
@@ -499,18 +499,18 @@ contract GatewayVault is OApp, OAppOptionsType3 {
 
     /**
      * @dev Internal view function to check token status (not paused), remove dust from amounts,
-     * and transform input `Asset` array for further processing.
-     * @param _assets Array of `Asset` structs (calldata) with user-provided amounts.
-     * @return assets Array of `Asset` structs (memory) with original token addresses and dust-removed amounts.
+     * and transform input `EvmAsset` array for further processing.
+     * @param _assets Array of `EvmAsset` structs (calldata) with user-provided amounts.
+     * @return assets Array of `EvmAsset` structs (memory) with original token addresses and dust-removed amounts.
      * @custom:reverts if a token is not found, is paused, or if amount becomes zero after dust removal.
      */
     function _checkAndTransform(
-        Asset[] calldata _assets
-    ) internal view returns (Asset[] memory assets) {
-        assets = new Asset[](_assets.length);
+        EvmAsset[] calldata _assets
+    ) internal view returns (EvmAsset[] memory assets) {
+        assets = new EvmAsset[](_assets.length);
 
         for (uint256 i = 0; i < _assets.length; i++) {
-            Asset calldata _assetEntry = _assets[i];
+            EvmAsset calldata _assetEntry = _assets[i];
             uint256 _index = getTokenIndex(_assetEntry.tokenAddress);
             EvmAvailableToken memory _availableToken = availableTokens[_index];
             require(!_availableToken.onPause, "Token is paused");
@@ -522,7 +522,7 @@ contract GatewayVault is OApp, OAppOptionsType3 {
             uint256 _amount = _removeDust(_assetEntry.tokenAmount, _availableToken.decimalsDelta);
             require(_amount > 0, "Amount is too small");
 
-            assets[i] = Asset({ tokenAddress: _availableToken.tokenAddress, tokenAmount: _amount });
+            assets[i] = EvmAsset({ tokenAddress: _availableToken.tokenAddress, tokenAmount: _amount });
         }
     }
 }

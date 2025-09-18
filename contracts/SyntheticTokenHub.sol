@@ -12,7 +12,7 @@ import { ISyntheticToken } from "./interfaces/ISyntheticToken.sol";
 import { SyntheticToken } from "./SyntheticToken.sol";
 import { OptionsBuilder } from "@layerzerolabs/oapp-evm/contracts/oapp/libs/OptionsBuilder.sol";
 import { IBalancer } from "./interfaces/IBalancer.sol";
-import { MessageType, Asset, CommonAsset, CommonSwapParams, CommonAvailableToken } from "./interfaces/ICommonStructs.sol";
+import { MessageType, EvmAsset, CommonAsset, CommonSwapParams, CommonAvailableToken } from "./interfaces/ICommonStructs.sol";
 
 import { SyntheticTokenHubHelpers } from "./libraries/SyntheticTokenHubHelpers.sol";
 
@@ -134,7 +134,7 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
         bytes32 guid,
         address from,
         bytes32 to,
-        Asset[] assets,
+        EvmAsset[] assets,
         uint256[] penalties
     );
     /**
@@ -255,7 +255,7 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
      */
     function bridgeTokens(
         bytes32 _recipient,
-        Asset[] memory _assets,
+        EvmAsset[] memory _assets,
         uint32 _dstEid,
         bytes calldata _options
     ) external payable returns (MessagingReceipt memory receipt) {
@@ -304,7 +304,7 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
      */
     function quoteBridgeTokens(
         bytes32 _recipient,
-        Asset[] memory _assets,
+        EvmAsset[] memory _assets,
         uint32 _dstEid,
         bytes calldata _options
     )
@@ -332,7 +332,7 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
      */
     function quoteSwap(
         bytes32 _recipient,
-        Asset[] calldata _assetsIn,
+        EvmAsset[] calldata _assetsIn,
         address syntheticTokenOut,
         uint32 srcEid,
         uint32 dstEid,
@@ -351,8 +351,8 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
         bytes memory payloadRevert = abi.encode(MessageType.RevertSwap, msgDataRevert);
 
         // Prepare payload for the swap message
-        Asset[] memory _assetsOut = new Asset[](1);
-        _assetsOut[0] = Asset({ tokenAddress: syntheticTokenOut, tokenAmount: 1 }); // Mock amount, actual amount determined during swap
+        EvmAsset[] memory _assetsOut = new EvmAsset[](1);
+        _assetsOut[0] = EvmAsset({ tokenAddress: syntheticTokenOut, tokenAmount: 1 }); // Mock amount, actual amount determined during swap
         bytes memory msgDataSwap = abi.encode(_recipient, _recipient, _assetsOut); // Note: _recipient is used twice as per original logic
         bytes memory payloadSwap = abi.encode(MessageType.Swap, msgDataSwap);
 
@@ -409,7 +409,7 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
      * @return penalties Array of penalties calculated for each asset.
      */
     function validateAndPrepareAssets(
-        Asset[] memory _assets,
+        EvmAsset[] memory _assets,
         uint32 _dstEid,
         bool _skipMinBridgeAmtCheck
     ) public view returns (CommonAsset[] memory assets, uint256[] memory penalties) {
@@ -418,7 +418,7 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
         penalties = new uint256[](inputLength);
 
         for (uint256 i = 0; i < inputLength; i++) {
-            Asset memory _asset = _assets[i];
+            EvmAsset memory _asset = _assets[i];
             address syntheticTokenAddress = _asset.tokenAddress;
             uint256 amount = _asset.tokenAmount;
 
@@ -532,8 +532,8 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
         );
 
         if (success) {
-            Asset[] memory assetsToBurn = new Asset[](1);
-            assetsToBurn[0] = Asset({
+            EvmAsset[] memory assetsToBurn = new EvmAsset[](1);
+            assetsToBurn[0] = EvmAsset({
                 tokenAddress: params.syntheticTokenOut,
                 tokenAmount: ISyntheticToken(params.syntheticTokenOut).balanceOf(address(this))
             });
@@ -568,9 +568,9 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
      * @param _dstEid Destination network identifier for which to update the balance.
      * @param from The address from which the tokens are burned (original owner or this contract for swaps).
      */
-    function _burnTokens(Asset[] memory _assets, uint32 _dstEid, address from) private {
+    function _burnTokens(EvmAsset[] memory _assets, uint32 _dstEid, address from) private {
         for (uint256 i = 0; i < _assets.length; i++) {
-            Asset memory _asset = _assets[i];
+            EvmAsset memory _asset = _assets[i];
             address syntheticTokenAddress = _asset.tokenAddress;
             uint256 amount = _asset.tokenAmount;
             RemoteTokenInfo storage remoteToken = _remoteTokens[syntheticTokenAddress][_dstEid];
