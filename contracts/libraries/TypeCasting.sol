@@ -9,7 +9,7 @@ library TypeCasting {
         return bytes32(uint256(uint160(evmAddress)));
     }
 
-    function toAddress(bytes32 commonAddress) internal view returns (address) {
+    function toAddress(bytes32 commonAddress) internal pure returns (address) {
         require(commonAddress >> 160 == bytes32(0), "Bytes32 casting failed");
         return address(uint160(uint256(commonAddress)));
     }    

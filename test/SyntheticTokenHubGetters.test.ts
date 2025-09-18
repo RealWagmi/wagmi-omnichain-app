@@ -547,7 +547,7 @@ describe("SyntheticTokenHubGetters", function () {
       // Get quote for withdraw
       const withdrawOptions = Options.newOptions().addExecutorLzReceiveOption(LZ_GAS_LIMIT, 0).toHex().toString();
       const [withdrawFee, assetsRemote, penalties] = await syntheticTokenHub.quoteBridgeTokens(
-        user1.address,
+        toBytes32(user1.address),
         [{ tokenAddress: syntheticTokenAddress, tokenAmount: depositAmount }],
         remoteChainId,
         withdrawOptions
@@ -557,7 +557,7 @@ describe("SyntheticTokenHubGetters", function () {
       await syntheticTokenHub
         .connect(user1)
         .bridgeTokens(
-          user1.address,
+          toBytes32(user1.address),
           [{ tokenAddress: syntheticTokenAddress, tokenAmount: depositAmount }],
           remoteChainId,
           withdrawOptions,
@@ -733,7 +733,7 @@ describe("SyntheticTokenHubGetters", function () {
 
       const withdrawOptionsBonus = Options.newOptions().addExecutorLzReceiveOption(LZ_GAS_LIMIT, 0).toHex().toString();
       const [withdrawFeeBonus, , penaltiesBonus] = await syntheticTokenHub.quoteBridgeTokens(
-        user1.address,
+        toBytes32(user1.address),
         [{ tokenAddress: syntheticBonusTokenAddress, tokenAmount: withdrawAmountBonus }],
         remoteChainIdForBonus,
         withdrawOptionsBonus
@@ -748,7 +748,7 @@ describe("SyntheticTokenHubGetters", function () {
       await syntheticTokenHub
         .connect(user1)
         .bridgeTokens(
-          user1.address,
+          toBytes32(user1.address),
           [{ tokenAddress: syntheticBonusTokenAddress, tokenAmount: withdrawAmountBonus }],
           remoteChainIdForBonus,
           withdrawOptionsBonus,

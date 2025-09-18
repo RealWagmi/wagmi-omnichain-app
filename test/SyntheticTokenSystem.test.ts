@@ -563,7 +563,7 @@ describe("Synthetic Token System", function () {
 
       // For bridging back, we need to use the bridgeTokens function
       const [nativeFeeBurn, assetsRemote, penalties] = await syntheticTokenHub.quoteBridgeTokens(
-        user2.address,
+        toBytes32(user2.address),
         [{ tokenAddress: syntheticBtcToken.address, tokenAmount: BtcAmount }],
         eidC,
         optionsBurn
@@ -573,7 +573,7 @@ describe("Synthetic Token System", function () {
       await syntheticTokenHub
         .connect(user2)
         .bridgeTokens(
-          user2.address,
+          toBytes32(user2.address),
           [{ tokenAddress: syntheticBtcToken.address, tokenAmount: BtcAmount }],
           eidC,
           optionsBurn,
@@ -603,7 +603,7 @@ describe("Synthetic Token System", function () {
       // Need to use callStatic for quoteBridgeTokens if we expect a revert from validateAndPrepareAssets
       await expect(
         syntheticTokenHub.callStatic.quoteBridgeTokens(
-          user2.address,
+          toBytes32(user2.address),
           [{ tokenAddress: syntheticBtcToken.address, tokenAmount: smallAmtWBTC_Synth }],
           eidC,
           options
@@ -612,7 +612,7 @@ describe("Synthetic Token System", function () {
 
       // Try to bridge valid amount - quote should succeed, then bridge
       const [nativeFeeValid, assetsRemoteValid, penaltiesValid] = await syntheticTokenHub.quoteBridgeTokens(
-        user2.address,
+        toBytes32(user2.address),
         [{ tokenAddress: syntheticBtcToken.address, tokenAmount: validAmtWBTC_Synth }],
         eidC,
         options
@@ -624,7 +624,7 @@ describe("Synthetic Token System", function () {
       await syntheticTokenHub
         .connect(user2)
         .bridgeTokens(
-          user2.address,
+          toBytes32(user2.address),
           [{ tokenAddress: syntheticBtcToken.address, tokenAmount: validAmtWBTC_Synth }],
           eidC,
           options,
@@ -643,7 +643,7 @@ describe("Synthetic Token System", function () {
 
       // For bridging back, we need to use the bridgeTokens function
       const [nativeFeeBurn, assetsRemote, penalties] = await syntheticTokenHub.quoteBridgeTokens(
-        user1.address,
+        toBytes32(user1.address),
         [{ tokenAddress: syntheticUsdtToken.address, tokenAmount: depositUsdtAmount }],
         eidB,
         optionsBurn
@@ -653,7 +653,7 @@ describe("Synthetic Token System", function () {
       await syntheticTokenHub
         .connect(user3)
         .bridgeTokens(
-          user1.address,
+          toBytes32(user1.address),
           [{ tokenAddress: syntheticUsdtToken.address, tokenAmount: depositUsdtAmount }],
           eidB,
           optionsBurn,
@@ -1110,10 +1110,10 @@ describe("Synthetic Token System", function () {
       const initialBalance_test18_user1 = await syntheticTestToken_test18.balanceOf(user1.address);
       const optionsBurn_test18 = Options.newOptions().addExecutorLzReceiveOption(LZ_GAS_LIMIT, 0).toHex().toString();
       const [nativeFeeBurn_test18 /* assetsRemote_test18 */ /* penalties2_test18 */, ,] =
-        await syntheticTokenHub.quoteBridgeTokens(user1.address, dustyAsset_test18, eidB, optionsBurn_test18);
+        await syntheticTokenHub.quoteBridgeTokens(toBytes32(user1.address), dustyAsset_test18, eidB, optionsBurn_test18);
       await syntheticTokenHub
         .connect(user1)
-        .bridgeTokens(user1.address, dustyAsset_test18, eidB, optionsBurn_test18, { value: nativeFeeBurn_test18 });
+        .bridgeTokens(toBytes32(user1.address), dustyAsset_test18, eidB, optionsBurn_test18, { value: nativeFeeBurn_test18 });
       const finalBalance_test18_user1 = await syntheticTestToken_test18.balanceOf(user1.address);
       const actualBurnedAmount_test18 = initialBalance_test18_user1.sub(finalBalance_test18_user1);
       expect(actualBurnedAmount_test18).to.equal(expectedDustRemovedAmount_test18);

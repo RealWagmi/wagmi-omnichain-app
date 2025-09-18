@@ -75,8 +75,10 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
     // Synthetic tokens registry
     // @dev Mapping from token index to synthetic token information.
     mapping(uint256 => SyntheticTokenInfo) private _syntheticTokens;
+
     // @dev Mapping from local synthetic token address to its remote token information per endpoint ID (eid).
     mapping(address => mapping(uint32 => RemoteTokenInfo)) private _remoteTokens; // token address => eid => RemoteTokenInfo
+
     uint256 private _syntheticTokenCount; // Counter for the number of synthetic tokens created
 
     // Mapping for token lookup: tokenAddress => tokenIndex + 1 (0 means not found)
@@ -120,25 +122,7 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
      * @param eid The endpoint ID of the remote chain.
      */
     event RemoteTokenLinked(CommonAvailableToken[] availableTokens, address gatewayVault, uint32 eid);
-    /**
-     * @dev Emitted when synthetic tokens are minted.
-     * @param tokenIndex The index of the synthetic token minted.
-     * @param recipient The address that received the minted tokens.
-     * @param amount The amount of tokens minted.
-     * @param sourceEid The endpoint ID of the source chain from which the deposit originated.
-     */
-    event TokenMinted(
-        uint256 indexed tokenIndex,
-        address recipient,
-        uint256 amount,
-        uint32 sourceEid
-    );
-    /**
-     * @dev Emitted when synthetic tokens are burned for bridging.
-     * @param dstEid The destination endpoint ID.
-     * @param assets Array of assets (token addresses and amounts) that were burned.
-     */
-    event TokenBurned(uint32 dstEid, Asset[] assets);
+
     /**
      * @dev Emitted when a LayerZero message is sent.
      * @param dstEid The destination endpoint ID.
@@ -152,7 +136,7 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
         uint32 dstEid,
         bytes32 guid,
         address from,
-        address to,
+        bytes32 to,
         Asset[] assets,
         uint256[] penalties
     );
@@ -273,7 +257,7 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
      * @param _options LayerZero transaction options
      */
     function bridgeTokens(
-        address _recipient,
+        bytes32 _recipient,
         Asset[] memory _assets,
         uint32 _dstEid,
         bytes calldata _options
@@ -322,7 +306,7 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
      * @return penalties Array of penalties
      */
     function quoteBridgeTokens(
-        address _recipient,
+        bytes32 _recipient,
         Asset[] memory _assets,
         uint32 _dstEid,
         bytes calldata _options
