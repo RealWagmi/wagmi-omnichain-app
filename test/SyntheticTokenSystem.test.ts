@@ -44,9 +44,16 @@ import { MixedRouteTrade, MixedRouteSDK, Trade as RouterTrade } from "@uniswap/r
 import { CommandType, RoutePlanner } from "./testHelper/planner";
 import { GatewaySwapParamsStruct, AssetStruct } from "../typechain-types/contracts/GatewayVault";
 import { encodePath, getMultiHopQuote, priceToTick, addV3ExactInTrades } from "./testHelper/helpers";
+import { assert } from "console";
 
 const toBytes32 = function(address: string): string {
   return ("0x000000000000000000000000" + address.slice(2)).toLowerCase();
+}
+
+const fromBytes32 = function(address: string): string {
+  const prefix = address.slice(0, 26);
+  assert(prefix === "0x000000000000000000000000");
+  return ("0x" + address.slice(26)).toLowerCase();
 }
 
 describe("Synthetic Token System", function () {
@@ -422,10 +429,10 @@ describe("Synthetic Token System", function () {
 
     it("should have proper gateway mapping", async function () {
       // After linking tokens, the gatewayVaultByEid mapping should be updated
-      const gatewayB = await syntheticTokenHub.getGatewayVaultByEid(eidB);
-      expect(gatewayB).to.equal(gatewayVaultB.address);
-      const gatewayC = await syntheticTokenHub.getGatewayVaultByEid(eidC);
-      expect(gatewayC).to.equal(gatewayVaultC.address);
+      const gatewayB = fromBytes32(await syntheticTokenHub.getGatewayVaultByEid(eidB));
+      expect(gatewayB).to.equal(gatewayVaultB.address.toLowerCase());
+      const gatewayC = fromBytes32(await syntheticTokenHub.getGatewayVaultByEid(eidC));
+      expect(gatewayC).to.equal(gatewayVaultC.address.toLowerCase());
     });
   });
 
@@ -690,7 +697,7 @@ describe("Synthetic Token System", function () {
       const _assetsIn = [{ tokenAddress: bUSDT.address, tokenAmount: usdtSwapAmount }];
 
       const quoteFromHub = await syntheticTokenHub.quoteSwap(
-        user1.address,
+        toBytes32(user1.address),
         _assetsIn,
         syntheticBtcToken.address,
         eidB,
@@ -765,7 +772,7 @@ describe("Synthetic Token System", function () {
       const _assetsIn = [{ tokenAddress: bUSDT.address, tokenAmount: usdtSwapAmount }];
 
       const quoteFromHub = await syntheticTokenHub.quoteSwap(
-        user1.address,
+        toBytes32(user1.address),
         _assetsIn,
         syntheticBtcToken.address,
         eidB,
@@ -870,7 +877,7 @@ describe("Synthetic Token System", function () {
       const _assetsIn = [{ tokenAddress: bUSDT.address, tokenAmount: largeSwapAmount }];
 
       const quoteFromHub = await syntheticTokenHub.quoteSwap(
-        user2.address,
+        toBytes32(user2.address),
         _assetsIn,
         syntheticBtcToken.address,
         eidB,
@@ -1276,12 +1283,12 @@ describe("Synthetic Token System", function () {
 
     // Test getGatewayVaultByEid
     it("should return correct gateway vault address for existing chain", async function () {
-      const vaultAddress = await syntheticTokenHub.getGatewayVaultByEid(eidB);
-      expect(vaultAddress).to.equal(gatewayVaultB.address);
+      const vaultAddress = fromBytes32(await syntheticTokenHub.getGatewayVaultByEid(eidB));
+      expect(vaultAddress).to.equal(gatewayVaultB.address.toLowerCase());
     });
 
     it("should return zero address for non-existent chain", async function () {
-      const vaultAddress = await syntheticTokenHub.getGatewayVaultByEid(999);
+      const vaultAddress = fromBytes32(await syntheticTokenHub.getGatewayVaultByEid(999));
       expect(vaultAddress).to.equal(ethers.constants.AddressZero);
     });
 

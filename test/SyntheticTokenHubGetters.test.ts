@@ -17,12 +17,19 @@ import {
   Balancer__factory,
   Balancer,
 } from "../typechain-types";
+import { assert } from "console";
 
 const NUM_SYNTHETIC_TOKENS = 20;
 const NUM_REMOTE_CHAINS = 9;
 
 const toBytes32 = function(address: string): string {
   return ("0x000000000000000000000000" + address.slice(2)).toLowerCase();
+}
+
+const fromBytes32 = function(address: string): string {
+  const prefix = address.slice(0, 26);
+  assert(prefix === "0x000000000000000000000000");
+  return ("0x" + address.slice(26)).toLowerCase();
 }
 
 describe("SyntheticTokenHubGetters", function () {
@@ -317,7 +324,7 @@ describe("SyntheticTokenHubGetters", function () {
       this.timeout(NUM_REMOTE_CHAINS * 1000 + 5000);
       for (let i = 0; i < NUM_REMOTE_CHAINS; i++) {
         const remoteChainId = 2 + i;
-        const vaultAddress = await syntheticTokenHub.getGatewayVaultByEid(remoteChainId);
+        const vaultAddress = fromBytes32(await syntheticTokenHub.getGatewayVaultByEid(remoteChainId));
         expect(vaultAddress.toLowerCase()).to.equal(gatewayVaults[remoteChainId].address.toLowerCase());
       }
     });
@@ -849,7 +856,7 @@ describe("SyntheticTokenHubGetters", function () {
       const syntheticToken = syntheticTokens[0];
 
       // Test getGatewayVaultByEid with non-existent chain ID
-      const gatewayVault = await syntheticTokenHub.getGatewayVaultByEid(nonExistentChainId);
+      const gatewayVault = fromBytes32(await syntheticTokenHub.getGatewayVaultByEid(nonExistentChainId));
       expect(gatewayVault).to.equal(ethers.constants.AddressZero);
 
       // Test getRemoteTokenInfo with non-existent chain ID

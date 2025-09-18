@@ -92,7 +92,7 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
     // @dev Mapping from endpoint ID (eid) and local synthetic token address to the corresponding remote token address.
     mapping(uint32 => mapping(address => bytes32)) private _remoteAddressBySyntheticAddress; // eid => token address => remote address
     // @dev Mapping from endpoint ID (eid) to the GatewayVault contract address on that chain.
-    mapping(uint32 => address) private _gatewayVaultByEid; // eid => gateway vault address
+    mapping(uint32 => bytes32) private _gatewayVaultByEid; // eid => gateway vault address
     // @dev Mapping from synthetic token address and endpoint ID (eid) to the bonus balance accumulated.
     mapping(address => mapping(uint32 => uint256)) private _bonusBalance; // token address => eid => bonus balance
 
@@ -121,7 +121,7 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
      * @param gatewayVault The address of the GatewayVault contract on the remote chain.
      * @param eid The endpoint ID of the remote chain.
      */
-    event RemoteTokenLinked(CommonAvailableToken[] availableTokens, address gatewayVault, uint32 eid);
+    event RemoteTokenLinked(CommonAvailableToken[] availableTokens, bytes32 gatewayVault, uint32 eid);
 
     /**
      * @dev Emitted when a LayerZero message is sent.
@@ -334,14 +334,14 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
      * @return The maximum of the fee for the swap message and the revert message.
      */
     function quoteSwap(
-        address _recipient,
+        bytes32 _recipient,
         Asset[] calldata _assetsIn,
         address syntheticTokenOut,
         uint32 srcEid,
         uint32 dstEid,
         bytes calldata options
     ) public view returns (uint256) {
-        bytes32 _guid = bytes32(uint256(uint160(_recipient)));
+        bytes32 _guid = _recipient;
 
         // Prepare payload for a potential revert message
         bytes memory msgDataRevert = abi.encode(
@@ -643,7 +643,7 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
         } else if (messageType == MessageType.LinkToken) {
             _processLinkTokenMessage(
                 payload,
-                address(uint160(uint256(_origin.sender))),
+                _origin.sender,
                 _origin.srcEid
             );
         } else {
@@ -661,7 +661,7 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
      */
     function _processLinkTokenMessage(
         bytes memory _payload,
-        address _sender,
+        bytes32 _sender,
         uint32 _srcEid
     ) internal {
         CommonAvailableToken[] memory _availableTokens = abi.decode(_payload, (CommonAvailableToken[]));
@@ -971,7 +971,7 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
      * @param _eid The endpoint ID (chain ID).
      * @return address The address of the GatewayVault on the specified chain.
      */
-    function getGatewayVaultByEid(uint32 _eid) external view returns (address) {
+    function getGatewayVaultByEid(uint32 _eid) external view returns (bytes32) {
         return _gatewayVaultByEid[_eid];
     }
 
