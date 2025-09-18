@@ -88,9 +88,6 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
     // Mapping for token lookup by network and remote address
     // @dev Mapping from endpoint ID (eid) and remote token address to the corresponding local synthetic token address.
     mapping(uint32 => mapping(bytes32 => address)) private _syntheticAddressByRemoteAddress; // eid => remote address => token address
-    // Mapping for token lookup by network and synthetic address
-    // @dev Mapping from endpoint ID (eid) and local synthetic token address to the corresponding remote token address.
-    mapping(uint32 => mapping(address => bytes32)) private _remoteAddressBySyntheticAddress; // eid => token address => remote address
     // @dev Mapping from endpoint ID (eid) to the GatewayVault contract address on that chain.
     mapping(uint32 => bytes32) private _gatewayVaultByEid; // eid => gateway vault address
     // @dev Mapping from synthetic token address and endpoint ID (eid) to the bonus balance accumulated.
@@ -700,7 +697,6 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
             tokenInfo.chainList.push(_srcEid);
 
             _syntheticAddressByRemoteAddress[_srcEid][remoteTokenAddress] = syntheticTokenAddress;
-            _remoteAddressBySyntheticAddress[_srcEid][syntheticTokenAddress] = remoteTokenAddress;
         }
 
         emit RemoteTokenLinked(_availableTokens, _sender, _srcEid);
@@ -907,7 +903,6 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
      * @notice Gets the total number of synthetic tokens created in the hub.
      * @return uint256 The count of synthetic tokens.
      */
-
     function getSyntheticTokenCount() external view returns (uint256) {
         return _syntheticTokenCount;
     }
@@ -937,7 +932,7 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
 
     /**
      * @notice Gets the remote token address linked to a local synthetic token address on a specific chain.
-     * @dev Reads `_remoteAddressBySyntheticAddress[eid][syntheticAddress]` from SyntheticTokenHub.
+     * @dev Reads remote token address from _remoteTokens mapping.
      * @param _eid The endpoint ID (chain ID) of the remote network.
      * @param _syntheticAddress The address of the local synthetic token.
      * @return address The address of the corresponding token on the remote chain.
@@ -946,7 +941,8 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
         uint32 _eid,
         address _syntheticAddress
     ) external view returns (bytes32) {
-        return _remoteAddressBySyntheticAddress[_eid][_syntheticAddress];
+        RemoteTokenInfo storage remoteToken = _remoteTokens[_syntheticAddress][_eid];
+        return remoteToken.remoteAddress;
     }
 
     /**
