@@ -256,7 +256,7 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
      * @param _options LayerZero transaction options
      */
     function bridgeTokens(
-        bytes32 _recipient,
+        bytes32 _recipient, // Destination network could be any
         EvmAsset[] memory _assets,
         uint32 _dstEid,
         bytes calldata _options
@@ -924,7 +924,7 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
 
     /**
      * @notice Gets the token index for a given synthetic token address.
-     * @dev The token index is `_tokenIndexByAddress[tokenAddress]` in SyntheticTokenHub.
+     * @dev Reads token index from _tokenIndexByAddress mapping.
      * @param _tokenAddress The address of the synthetic token.
      * @return uint256 The index of the token (0 if not found, though other functions might require >0).
      */
@@ -937,7 +937,7 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
      * @dev Reads remote token address from _remoteTokens mapping.
      * @param _eid The endpoint ID (chain ID) of the remote network.
      * @param _syntheticAddress The address of the local synthetic token.
-     * @return address The address of the corresponding token on the remote chain.
+     * @return bytes32 The remote (not only EVM) address of the corresponding token on the remote chain.
      */
     function getRemoteAddressBySyntheticAddress(
         uint32 _eid,
@@ -949,7 +949,7 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
 
     /**
      * @notice Gets the local synthetic token address linked to a remote token address on a specific chain.
-     * @dev Reads `_syntheticAddressByRemoteAddress[eid][remoteAddress]` from SyntheticTokenHub.
+     * @dev Reads suntetic token address from _syntheticAddressByRemoteAddress mapping.
      * @param _eid The endpoint ID (chain ID) of the remote network.
      * @param _remoteAddress The address of the token on the remote chain.
      * @return address The address of the corresponding local synthetic token.
@@ -961,13 +961,11 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
         return _syntheticAddressByRemoteAddress[_eid][_remoteAddress];
     }
 
-    // ЗДЕСЬ НУЖЕН BYTES32
-
     /**
      * @notice Gets the GatewayVault address for a specific endpoint ID (chain ID).
-     * @dev Reads `_gatewayVaultByEid[eid]` from SyntheticTokenHub.
+     * @dev Reads gateway vault address from _gatewayVaultByEid mapping.
      * @param _eid The endpoint ID (chain ID).
-     * @return address The address of the GatewayVault on the specified chain.
+     * @return bytes32 The address of the GatewayVault on the specified chain.
      */
     function getGatewayVaultByEid(uint32 _eid) external view returns (bytes32) {
         return _gatewayVaultByEid[_eid];
@@ -975,7 +973,7 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
 
     /**
      * @notice Gets the accumulated bonus balance for a specific synthetic token on a specific chain (eid).
-     * @dev Reads `_bonusBalance[tokenAddress][eid]` from SyntheticTokenHub.
+     * @dev Reads bonus balance from _bonusBalance mapping.
      * @param _tokenAddress The address of the local synthetic token.
      * @param _eid The endpoint ID (chain ID).
      * @return uint256 The bonus balance amount.
@@ -986,7 +984,7 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
 
     /**
      * @notice Returns comprehensive information about a specific synthetic token, including its remote counterparts.
-     * @dev Reads various storage slots related to the `SyntheticTokenInfo` struct and its linked `RemoteTokenInfo` structs.
+     * @dev Builds syntetic token view info from different mappings.
      * @param _tokenIndex The 1-based index of the synthetic token.
      * @return SyntheticTokenView A struct containing details of the synthetic token and its linked remote tokens.
      */
@@ -998,18 +996,13 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
         SyntheticTokenInfo memory tokenInfo = _syntheticTokens[_tokenIndex];
         require(tokenInfo.tokenAddress != address(0), "Token not found");
 
-        uint256 batchSize = 5;
         RemoteTokenView[] memory remoteTokens = new RemoteTokenView[](tokenInfo.chainList.length);
-        for (uint256 i = 0; i < tokenInfo.chainList.length; i += batchSize) {
-            uint256 currentBatchSize = i + batchSize > tokenInfo.chainList.length
-                ? tokenInfo.chainList.length - i
-                : batchSize;
-            for (uint256 j = 0; j < currentBatchSize; j++) {
-                uint32 eid = tokenInfo.chainList[i + j];
-                // Fetch remote token details for the current synthetic token on chain `eid`.
-                RemoteTokenInfo memory remoteInfo = getRemoteTokenInfo(tokenInfo.tokenAddress, eid);
-                remoteTokens[i + j] = RemoteTokenView({ eid: eid, remoteTokenInfo: remoteInfo });
-            }
+        for (uint256 i = 0; i < tokenInfo.chainList.length; i++) {
+            uint32 eid = tokenInfo.chainList[i];
+
+            // Fetch remote token details for the current synthetic token on chain `eid`.
+            RemoteTokenInfo memory remoteInfo = getRemoteTokenInfo(tokenInfo.tokenAddress, eid);
+            remoteTokens[i] = RemoteTokenView({ eid: eid, remoteTokenInfo: remoteInfo });
         }
         // Construct and return the complete SyntheticTokenView.
         return
@@ -1036,14 +1029,10 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
         uint256 length = _tokenIndices.length > 0 ? _tokenIndices.length : syntheticTokenCount;
         SyntheticTokenView[] memory tokens = new SyntheticTokenView[](length);
 
-        uint256 batchSize = 10; // Defines how many tokens are processed notionally in one outer loop iteration.
-        for (uint256 i = 0; i < length; i += batchSize) {
-            uint256 currentBatchSize = i + batchSize > length ? length - i : batchSize;
-            for (uint256 j = 0; j < currentBatchSize; j++) {
-                // Determine the token index: either from the input array or by iterating from 1 to count.
-                uint256 tokenIndex = _tokenIndices.length > 0 ? _tokenIndices[i + j] : i + j + 1; // Token indices are 1-based.
-                tokens[i + j] = getSyntheticTokenInfo(tokenIndex);
-            }
+        for (uint256 i = 0; i < length; i++) {
+            // Determine the token index: either from the input array or by iterating from 1 to count.
+            uint256 tokenIndex = _tokenIndices.length > 0 ? _tokenIndices[i] : i + 1; // Token indices are 1-based.
+            tokens[i] = getSyntheticTokenInfo(tokenIndex);
         }
         return tokens;
     }
