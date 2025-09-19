@@ -88,8 +88,10 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
     // Mapping for token lookup by network and remote address
     // @dev Mapping from endpoint ID (eid) and remote token address to the corresponding local synthetic token address.
     mapping(uint32 => mapping(bytes32 => address)) private _syntheticAddressByRemoteAddress; // eid => remote address => token address
+
     // @dev Mapping from endpoint ID (eid) to the GatewayVault contract address on that chain.
     mapping(uint32 => bytes32) private _gatewayVaultByEid; // eid => gateway vault address
+
     // @dev Mapping from synthetic token address and endpoint ID (eid) to the bonus balance accumulated.
     mapping(address => mapping(uint32 => uint256)) private _bonusBalance; // token address => eid => bonus balance
 
@@ -132,7 +134,7 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
     event MessageSent(
         uint32 dstEid,
         bytes32 guid,
-        address from,
+        bytes32 from,
         bytes32 to,
         EvmAsset[] assets,
         uint256[] penalties
@@ -287,7 +289,7 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
             payable(msg.sender)
         );
 
-        emit MessageSent(_dstEid, receipt.guid, msg.sender, _recipient, _assets, penalties);
+        emit MessageSent(_dstEid, receipt.guid, msg.sender.toBytes32(), _recipient, _assets, penalties);
 
         return receipt;
     }
@@ -304,7 +306,7 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
      */
     function quoteBridgeTokens(
         bytes32 _recipient,
-        EvmAsset[] memory _assets,
+        EvmAsset[] memory _assets, // assets are originally defined on this (EVM) chain
         uint32 _dstEid,
         bytes calldata _options
     )
@@ -488,7 +490,7 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
      * @return payload The encoded LayerZero message payload to be sent (either a swap confirmation or a revert message).
      */
     function processSwapMessage(
-        CommonSwapParams memory params,
+        CommonSwapParams memory params, // swap params are from source chain and could be not EVM
         uint32 _srcEid
     ) external returns (bytes memory payload) {
         if (msg.sender != address(this)) revert InvalidSwapSender();

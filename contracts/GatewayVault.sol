@@ -229,8 +229,8 @@ contract GatewayVault is OApp, OAppOptionsType3 {
      * @custom:reverts if any token is paused, amount is too small after dust removal, or token not found.
      */
     function deposit(
-        address _recepient,
-        EvmAsset[] calldata _assets,
+        address _recepient, // hub network is EVM
+        EvmAsset[] calldata _assets, // assets are from this EVM network
         bytes calldata _options
     ) external payable returns (MessagingReceipt memory) {
         EvmAsset[] memory assets = _checkAndTransform(_assets);
@@ -253,7 +253,7 @@ contract GatewayVault is OApp, OAppOptionsType3 {
     function swap(
         EvmSwapParams memory _swapParams,
         bytes calldata _options,
-        EvmAsset[] calldata _assets
+        EvmAsset[] calldata _assets // assets are from this EVM network
     ) external payable returns (MessagingReceipt memory) {
         EvmAsset[] memory assets = _checkAndTransform(_assets);
         _swapParams.from = msg.sender.toBytes32();
