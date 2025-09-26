@@ -107,6 +107,20 @@ const config: HardhatUserConfig = {
       gasPrice: "auto",
       accounts: [`${process.env.PRIVATE_KEY}`],
     },
+    sepolia: {
+      url: "https://eth-sepolia.g.alchemy.com/v2/ryKPXP_HV4zwhrhhaSxX4R6Vx3nKvBvR",
+      gas: "auto",
+      gasMultiplier: 1.2,
+      gasPrice: 2000000,
+      accounts: [`${process.env.PRIVATE_KEY}`],
+    },
+    chapel: {
+      url: "https://bsc-testnet-dataseed.bnbchain.org/",
+      gas: "auto",
+      gasMultiplier: 1.2,
+      gasPrice: "auto",
+      accounts: [`${process.env.PRIVATE_KEY}`],
+    },
   },
   mocha: {
     timeout: 1000000,

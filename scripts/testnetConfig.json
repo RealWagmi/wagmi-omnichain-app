@@ -1,0 +1,16 @@
+{
+    "sepolia": {
+        "hub": "0xcD8d1169787B8b7D3059e45a2e0Dbd195DC9a008",
+        "usdt": "0xb67fa2988f9790c9d63c8f666c794910aa66d3fe",
+        "usdc": "0x2a16011c26e04caf4087e9d9b1de93f9fa886318"
+    },
+    "chapel": {
+        "vault": "0xCE7F9df7A94AA314300AA18abc790322f6F5300c",
+        "usdt": "0xf9834B306d5381E032564D82b5ecC9fbe4D09df7",
+        "usdc": "0xe8590233d5a36f0eF1Df210D1879F60F2586F26a"
+    },
+    "solana": {
+        "store": "0xb512c3df00503beea4c239c6304b105b40e02b191275727399151d99fee04816",
+        "recipient": "0xb785ae9455d7161c8627cbb6c650f5a625a5ad6545b21ee38766636a4fcc844b"
+    }
+}
