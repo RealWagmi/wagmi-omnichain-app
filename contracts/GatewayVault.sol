@@ -118,14 +118,6 @@ contract GatewayVault is OApp, OAppOptionsType3 {
         EvmAsset[] assets
     );
     /**
-     * @dev Emitted when a revert message for a swap is received from SyntheticTokenHub.
-     * @param messageType The type of message (should be RevertSwap).
-     * @param guid The LayerZero GUID of the original swap message that was reverted.
-     * @param from The original initiator of the swap.
-     * @param reason The reason for the swap revert.
-     */
-    event ReceivedRevert(MessageType messageType, bytes32 guid, bytes32 from, string reason);
-    /**
      * @dev Emitted when new tokens are successfully linked to the SyntheticTokenHub.
      * @param guid The LayerZero GUID of the linkTokenToHub message.
      * @param newTokens Array of tokens that were linked.
@@ -384,25 +376,9 @@ contract GatewayVault is OApp, OAppOptionsType3 {
 
         (MessageType messageType, bytes memory payload) = _payload.decodePacked();
 
-        if (messageType == MessageType.Withdraw || messageType == MessageType.Swap) {
+        if (messageType == MessageType.Withdraw || messageType == MessageType.Swap || messageType == MessageType.RevertSwap) {
             _processMessage(messageType, payload, _guid, _origin.srcEid);
-        } else if (messageType == MessageType.RevertSwap) {
-            _processMessageRevertSwap(messageType, payload);
         }
-    }
-
-    /**
-     * @dev Processes a RevertSwap message from the SyntheticTokenHub.
-     * This means a swap initiated by a user failed on the hub, and the original assets are being returned.
-     * @param messageType The type of message (should be `MessageType.RevertSwap`).
-     * @param _payload The decoded payload specific to RevertSwap.
-     */
-    function _processMessageRevertSwap(MessageType messageType, bytes memory _payload) internal {
-        (bytes32 _from, , EvmAsset[] memory _assets, bytes32 _guid, string memory _reason) = abi
-            .decode(_payload, (bytes32, bytes32, EvmAsset[], bytes32, string));
-
-        _transferBatch(_assets, _from.toAddress());
-        emit ReceivedRevert(messageType, _guid, _from, _reason);
     }
 
     /**

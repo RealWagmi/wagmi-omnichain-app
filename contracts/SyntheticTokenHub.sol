@@ -154,6 +154,15 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
      */
     event BalancerSet(address balancerAddress);
 
+    /**
+     * @dev Emitted when a swap reverts.
+     * @param srcEid The EID of the source network, that initiated the swap
+     * @param guid The LayerZero GUID of the swap message that was reverted.
+     * @param from The original initiator of the swap.
+     * @param reason The reason for the swap revert.
+     */
+    event SwapReverted(uint32 srcEid, bytes32 guid, bytes32 from, string reason);
+
     constructor(
         address _endpoint,
         address _owner,
@@ -346,9 +355,7 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
         bytes memory msgDataRevert = abi.encode(
             _recipient, // from
             _recipient, // to
-            _assetsIn,
-            _guid,
-            "THIS_IS_FAKE_ERROR_MESSAGE" // Mock error message
+            _assetsIn
         );
         bytes memory payloadRevert = abi.encodePacked(MessageType.RevertSwap, msgDataRevert);
 
@@ -622,9 +629,7 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
                 bytes memory msgData = abi.encode(
                     params.from,
                     params.to,
-                    params.assets,
-                    _guid,
-                    string(reason)
+                    params.assets
                 );
                 payload = abi.encodePacked(MessageType.RevertSwap, msgData);
 
@@ -635,6 +640,8 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
                     MessagingFee(msg.value, 0),
                     payable(params.evmAddress)
                 );
+                
+                emit SwapReverted(_origin.srcEid, _guid, params.from, string(reason));
             }
         } else if (messageType == MessageType.LinkToken) {
             _processLinkTokenMessage(
