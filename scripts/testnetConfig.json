@@ -1,16 +1,16 @@
 {
     "sepolia": {
-        "hub": "0xcD8d1169787B8b7D3059e45a2e0Dbd195DC9a008",
-        "usdt": "0xb67fa2988f9790c9d63c8f666c794910aa66d3fe",
-        "usdc": "0x2a16011c26e04caf4087e9d9b1de93f9fa886318"
+        "hub": "0xf8Aba3e8844eAFa556DA8e4531f10A76A19a8B1f",
+        "usdt": "0x3181483b8f3ac321ac9097bbffd5e6fc52c8bb28",
+        "usdc": "0x8c530dbadc107e386d0932a706f1167dabc109db"
     },
     "chapel": {
-        "vault": "0xCE7F9df7A94AA314300AA18abc790322f6F5300c",
-        "usdt": "0xf9834B306d5381E032564D82b5ecC9fbe4D09df7",
-        "usdc": "0xe8590233d5a36f0eF1Df210D1879F60F2586F26a"
+        "vault": "0xc84448d8fc898B60c13f67183b6fa252596feBaF",
+        "usdt": "0x9C1864c5f5349542374F1D6762a33EDACED360e0",
+        "usdc": "0xcCEb501B7DF34c1e58751245F802760B57B95f40"
     },
     "solana": {
-        "store": "0xb512c3df00503beea4c239c6304b105b40e02b191275727399151d99fee04816",
+        "store": "0x1578355a787ab61300914e981e0258e1d8ee68983b4873d67449b1ff593bab0c",
         "recipient": "0xb785ae9455d7161c8627cbb6c650f5a625a5ad6545b21ee38766636a4fcc844b"
     }
 }

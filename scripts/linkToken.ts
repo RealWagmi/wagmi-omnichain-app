@@ -12,7 +12,7 @@ async function main() {
 
     const vault = await ethers.getContractAt("GatewayVault", params.chapel.vault);
 
-    const tokenSetupConfigs: GatewayVault.TokenSetupConfigStruct[] = [
+    let tokenSetupConfigs: GatewayVault.TokenSetupConfigStruct[] = [
         {
         onPause: false,
         tokenAddress: params.chapel.usdt,
@@ -24,9 +24,24 @@ async function main() {
     
 
     const options = Options.newOptions().addExecutorLzReceiveOption(LZ_GAS_LIMIT, 0).toHex();
-    const fee = await vault.quoteLinkTokenToHub(tokenSetupConfigs, options);
+    let fee = await vault.quoteLinkTokenToHub(tokenSetupConfigs, options);
 
-    const tx = await vault.linkTokenToHub(tokenSetupConfigs, options, { value: fee });
+    let tx = await vault.linkTokenToHub(tokenSetupConfigs, options, { value: fee });
+    await tx.wait();
+
+    tokenSetupConfigs = [
+        {
+        onPause: false,
+        tokenAddress: params.chapel.usdc,
+        syntheticTokenDecimals: 18,
+        syntheticTokenAddress: params.sepolia.usdc,
+        minBridgeAmt: 0,
+        },
+    ];
+
+    fee = await vault.quoteLinkTokenToHub(tokenSetupConfigs, options);
+
+    tx = await vault.linkTokenToHub(tokenSetupConfigs, options, { value: fee });
     await tx.wait();
 
     process.exit(0);

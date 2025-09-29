@@ -207,7 +207,7 @@ contract GatewayVault is OApp, OAppOptionsType3 {
             _tokenIndexPlusOne[newTokens[i].tokenAddress] = availableTokens.length;
         }
         bytes memory msgData = abi.encode(newTokens);
-        bytes memory payload = abi.encode(MessageType.LinkToken, msgData);
+        bytes memory payload = abi.encodePacked(MessageType.LinkToken, msgData);
         MessagingReceipt memory receipt = _lzSend(
             DST_EID,
             payload,
@@ -235,7 +235,7 @@ contract GatewayVault is OApp, OAppOptionsType3 {
     ) external payable returns (MessagingReceipt memory) {
         EvmAsset[] memory assets = _checkAndTransform(_assets);
         bytes memory msgData = abi.encode(msg.sender, _recepient, assets);
-        bytes memory payload = abi.encode(MessageType.Deposit, msgData);
+        bytes memory payload = abi.encodePacked(MessageType.Deposit, msgData);
         return _sendCrossChainMessage(payload, _options, _recepient.toBytes32(), assets);
     }
 
@@ -259,7 +259,7 @@ contract GatewayVault is OApp, OAppOptionsType3 {
         _swapParams.from = msg.sender.toBytes32();
         _swapParams.assets = assets;
         bytes memory msgData = abi.encode(_swapParams);
-        bytes memory payload = abi.encode(MessageType.Swap, msgData);
+        bytes memory payload = abi.encodePacked(MessageType.Swap, msgData);
         return _sendCrossChainMessage(payload, _options, _swapParams.to, assets);
     }
 
@@ -275,7 +275,7 @@ contract GatewayVault is OApp, OAppOptionsType3 {
     ) public view returns (uint256 nativeFee) {
         EvmAvailableToken[] memory newTokens = _setupConfigToAvailableToken(_tokensConfigs);
         bytes memory msgData = abi.encode(newTokens);
-        bytes memory payload = abi.encode(MessageType.LinkToken, msgData);
+        bytes memory payload = abi.encodePacked(MessageType.LinkToken, msgData);
         nativeFee = (_quote(DST_EID, payload, _options, false)).nativeFee;
     }
 
@@ -293,7 +293,7 @@ contract GatewayVault is OApp, OAppOptionsType3 {
     ) public view returns (uint256 nativeFee) {
         EvmAsset[] memory assets = _checkAndTransform(_assets);
         bytes memory msgData = abi.encode(_recepient, _recepient, assets);
-        bytes memory payload = abi.encode(MessageType.Deposit, msgData);
+        bytes memory payload = abi.encodePacked(MessageType.Deposit, msgData);
         nativeFee = (_quote(DST_EID, payload, _options, false)).nativeFee;
     }
 
@@ -311,7 +311,7 @@ contract GatewayVault is OApp, OAppOptionsType3 {
     ) public view returns (uint256 nativeFee) {
         _swapParams.assets = _checkAndTransform(_assets);
         bytes memory msgData = abi.encode(_swapParams);
-        bytes memory payload = abi.encode(MessageType.Swap, msgData);
+        bytes memory payload = abi.encodePacked(MessageType.Swap, msgData);
         nativeFee = (_quote(DST_EID, payload, _options, false)).nativeFee;
     }
 
@@ -382,10 +382,7 @@ contract GatewayVault is OApp, OAppOptionsType3 {
     ) internal override {
         require(_origin.srcEid == DST_EID, "!DST_EID");
 
-        (MessageType messageType, bytes memory payload) = abi.decode(
-            _payload,
-            (MessageType, bytes)
-        );
+        (MessageType messageType, bytes memory payload) = _payload.decodePacked();
 
         if (messageType == MessageType.Withdraw || messageType == MessageType.Swap) {
             _processMessage(messageType, payload, _guid, _origin.srcEid);

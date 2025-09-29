@@ -3,6 +3,7 @@
 pragma solidity 0.8.23;
 
 import "hardhat/console.sol";
+import "../interfaces/ICommonStructs.sol";
 
 library TypeCasting {
     function toBytes32(address evmAddress) internal pure returns (bytes32) {
@@ -12,5 +13,14 @@ library TypeCasting {
     function toAddress(bytes32 commonAddress) internal pure returns (address) {
         require(commonAddress >> 160 == bytes32(0), "Bytes32 casting failed");
         return address(uint160(uint256(commonAddress)));
-    }    
+    }
+
+    function decodePacked(bytes calldata payload)
+        internal
+        pure
+        returns (MessageType messageType, bytes memory data)
+    {
+        messageType = MessageType(uint8(payload[0]));
+        data = bytes(payload[1:]);
+    }
 }

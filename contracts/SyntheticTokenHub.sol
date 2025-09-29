@@ -278,7 +278,7 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
 
         // Encode data for sending
         bytes memory msgData = abi.encode(msg.sender, _recipient, assetsRemote);
-        bytes memory payload = abi.encode(MessageType.Withdraw, msgData);
+        bytes memory payload = abi.encodePacked(MessageType.Withdraw, msgData);
 
         // Send message
         receipt = _lzSend(
@@ -317,7 +317,7 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
         (assetsRemote, penalties) = validateAndPrepareAssets(_assets, _dstEid, false); // Enforce minBridgeAmt check for quote
 
         bytes memory msgData = abi.encode(_recipient, _recipient, assetsRemote);
-        bytes memory payload = abi.encode(MessageType.Withdraw, msgData);
+        bytes memory payload = abi.encodePacked(MessageType.Withdraw, msgData);
         nativeFee = (_quote(_dstEid, payload, _options, false)).nativeFee;
     }
 
@@ -350,13 +350,13 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
             _guid,
             "THIS_IS_FAKE_ERROR_MESSAGE" // Mock error message
         );
-        bytes memory payloadRevert = abi.encode(MessageType.RevertSwap, msgDataRevert);
+        bytes memory payloadRevert = abi.encodePacked(MessageType.RevertSwap, msgDataRevert);
 
         // Prepare payload for the swap message
         EvmAsset[] memory _assetsOut = new EvmAsset[](1);
         _assetsOut[0] = EvmAsset({ tokenAddress: syntheticTokenOut, tokenAmount: 1 }); // Mock amount, actual amount determined during swap
         bytes memory msgDataSwap = abi.encode(_recipient, _recipient, _assetsOut); // Note: _recipient is used twice as per original logic
-        bytes memory payloadSwap = abi.encode(MessageType.Swap, msgDataSwap);
+        bytes memory payloadSwap = abi.encodePacked(MessageType.Swap, msgDataSwap);
 
         // Quote fees for both scenarios
         uint256 feeRevert = (_quote(dstEid, payloadRevert, options, false)).nativeFee;
@@ -553,7 +553,7 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
 
             _burnTokens(assetsToBurn, params.dstEid, address(this)); // Assumes assetsToBurn amounts are correct for burning logic
             bytes memory msgData = abi.encode(params.from, params.to, assetsToSend);
-            payload = abi.encode(MessageType.Swap, msgData);
+            payload = abi.encodePacked(MessageType.Swap, msgData);
         } else {
             revert SwapFailed(
                 returndata.length > 0 ? string(returndata) : "Uniswap execution failed"
@@ -598,10 +598,7 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
         address /*_executor*/,
         bytes calldata /*_extraData*/
     ) internal override {
-        (MessageType messageType, bytes memory payload) = abi.decode(
-            _payload,
-            (MessageType, bytes)
-        );
+        (MessageType messageType, bytes memory payload) = _payload.decodePacked();
         if (messageType == MessageType.Deposit) {
             _processDepositMessage(payload, _guid, _origin.srcEid);
         } else if (messageType == MessageType.Swap) {
@@ -629,7 +626,7 @@ contract SyntheticTokenHub is OApp, OAppOptionsType3 {
                     _guid,
                     string(reason)
                 );
-                payload = abi.encode(MessageType.RevertSwap, msgData);
+                payload = abi.encodePacked(MessageType.RevertSwap, msgData);
 
                 _lzSend(
                     _origin.srcEid,
